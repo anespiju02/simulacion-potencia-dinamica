@@ -1,811 +1,1458 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Laboratorio de Potencia</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
-<style>
-:root{
-  --bg:#EDF1F3;--surface:#FFFFFF;--surface-2:#E1E8EC;--ink:#10222C;--muted:#52646F;--line:#C3CFD6;--grid:#DCE4E9;
-  --accent:#0A6C8B;--accent-ink:#FFFFFF;--power:#C24A06;--on-power:#FFFFFF;--warn:#9A6A00;--good:#1C7A3C;--bad:#B3261E;
-  --sky:#CFE5F1;--ground:#B8D2AA;--ramp:#B08A5E;--hud:rgba(255,255,255,.94);
-  --f-display:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
-  --f-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
-  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#0D1920;--surface:#14252E;--surface-2:#1D3440;--ink:#E5EEF2;--muted:#9DB2BD;--line:#2D4653;--grid:#213B47;
-    --accent:#4DC0E0;--accent-ink:#06222B;--power:#FF9150;--on-power:#2A1204;--warn:#E0B04A;--good:#5CC785;--bad:#FF8F85;
-    --sky:#10303D;--ground:#1D3A2A;--ramp:#7E6244;--hud:rgba(20,37,46,.94);
-    color-scheme:dark;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#0D1920;--surface:#14252E;--surface-2:#1D3440;--ink:#E5EEF2;--muted:#9DB2BD;--line:#2D4653;--grid:#213B47;
-  --accent:#4DC0E0;--accent-ink:#06222B;--power:#FF9150;--on-power:#2A1204;--warn:#E0B04A;--good:#5CC785;--bad:#FF8F85;
-  --sky:#10303D;--ground:#1D3A2A;--ramp:#7E6244;--hud:rgba(20,37,46,.94);
-  color-scheme:dark;
-}
-*{box-sizing:border-box}
-body{
-  margin:0;background:var(--bg);color:var(--ink);
-  font-family:var(--f-body);font-size:14px;line-height:1.45;
-  padding:12px max(16px, env(safe-area-inset-right)) 32px max(16px, env(safe-area-inset-left));
-}
-.wrap{width:100%;max-width:1600px;margin:0 auto}
-h1,h2{margin:0}
-h1{
-  font-family:var(--f-display);font-weight:700;text-transform:uppercase;letter-spacing:.02em;
-  font-size:clamp(1.6rem, 3.5vw, 2.2rem);line-height:1;
-}
-h2{font-family:var(--f-display);font-weight:600;font-size:1.05rem;letter-spacing:.02em;line-height:1.15;margin:0}
-.top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 20px;margin-bottom:8px}
-.formulas{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px}
-.fx{font-family:var(--f-display);font-weight:600;font-size:1.35rem;letter-spacing:.02em;line-height:1.1}
-.fx b{color:var(--power);font-weight:700}
-.units{font-family:var(--f-mono);font-size:.76rem;color:var(--muted)}
-
-.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:6px 0 10px;overflow-x:auto}
-.tab{
-  font:600 .9rem var(--f-body);padding:6px 12px;background:none;border:0;border-bottom:3px solid transparent;
-  color:var(--muted);cursor:pointer;margin-bottom:-1px;white-space:nowrap;
-}
-.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--power)}
-.tab:hover{color:var(--ink)}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-
-.sim{
-  display:grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap:14px;
-  align-items:start;
-}
-.main{min-width:0;display:flex;flex-direction:column;gap:10px}
-.side{display:grid;gap:10px;min-width:0}
-
-.stagebox{position:relative;width:100%}
-.stage{
-  position:relative;
-  width:100%;
-  aspect-ratio: 16 / 9.5;
-  min-height: 420px;
-  max-height: 680px;
-  overflow:hidden;
-  border:1px solid var(--line);
-  border-radius:8px;
-  background:var(--sky);
-}
-.stage > svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.hud{
-  position:absolute;background:var(--hud);border:1px solid var(--line);border-radius:6px;padding:6px 10px;
-  backdrop-filter: blur(4px);
-}
-.hud-tl{top:10px;left:10px}
-.hud-tr{top:10px;right:10px;text-align:right}
-.hud dl{display:grid;grid-template-columns:auto auto;gap:2px 10px;margin:0;font-size:.82rem}
-.hud dt{color:var(--muted)}
-.hud dd{margin:0;font-family:var(--f-mono);font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
-.hud .lab-t{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-.big{font-family:var(--f-display);font-weight:700;font-size:clamp(2.2rem, 4vw, 3.5rem);line-height:1;color:var(--power);font-variant-numeric:tabular-nums}
-.big .unit{font-size:1.2rem;margin-left:4px;color:var(--ink)}
-.conv{margin-top:2px;font-size:.76rem;color:var(--muted)}
-.conv b{font-family:var(--f-mono);color:var(--ink);font-weight:600}
-
-.ov{
-  background:var(--hud);
-  border:1px solid var(--line);
-  border-radius:8px;
-  padding:10px 12px;
-  min-width:0;
-}
-.ov-split{width:100%;}
-.ovhead{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
-.ovhead h2{font-size:.95rem;margin-right:auto}
-.gbody{flex:1;min-height:0;margin-top:4px;position:relative;height:190px}
-#gSvg{display:block;position:absolute;inset:0;width:100%;height:100%}
-.mini{
-  font:600 .72rem var(--f-body);padding:2px 6px;border-radius:4px;border:1px solid var(--line);
-  background:var(--surface);color:var(--ink);cursor:pointer;
-}
-.mini:hover{border-color:var(--muted)}
-.minchk{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;color:var(--muted)}
-
-.playbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 12px;padding:4px 0}
-.btn{
-  font:600 .88rem var(--f-body);padding:8px 14px;border-radius:6px;border:1px solid var(--line);
-  background:var(--surface);color:var(--ink);cursor:pointer;
-  transition: background .15s ease, border-color .15s ease;
-}
-.btn:hover{border-color:var(--muted);background:var(--surface-2)}
-.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);min-width:8rem}
-.btn.primary:hover{opacity:.92}
-.inline{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;color:var(--muted)}
-select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:5px 8px}
-.pnote{width:100%;text-align:center;color:var(--muted);font-size:.82rem;margin:0}
-.insight{width:100%;text-align:center;font-weight:500;margin:0;font-size:.9rem}
-
-.box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0}
-.box .ttl{font-family:var(--f-display);font-weight:600;font-size:1rem;letter-spacing:.02em;margin-bottom:6px}
-.ctl{display:grid;grid-template-columns:1fr auto;gap:0 8px;margin-bottom:8px}
-.ctl:last-child{margin-bottom:0}
-.ctl label{font-size:.84rem;font-weight:500}
-.ctl output{font-family:var(--f-mono);font-size:.84rem}
-.ctl input{grid-column:1 / -1;width:100%;accent-color:var(--accent);margin:2px 0 0;cursor:pointer}
-.restore{width:100%;font-size:.92rem}
-.side .note{color:var(--muted);font-size:.76rem;margin:6px 0 0}
-details.box > summary{
-  cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:1rem;letter-spacing:.02em;list-style-position:inside;
-}
-details.box[open] > summary{margin-bottom:8px}
-.steps{margin:0;padding:0;list-style:none;display:grid;gap:8px;counter-reset:s}
-.steps li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:start}
-.steps li::before{
-  counter-increment:s;content:counter(s);width:22px;height:22px;border-radius:50%;background:var(--surface-2);
-  font:600 .72rem var(--f-mono);display:grid;place-items:center;margin-top:1px;
-}
-.step-name{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
-.step-math{font-family:var(--f-mono);font-size:.78rem;overflow-wrap:anywhere}
-.steps li.hl .step-math{color:var(--power);font-weight:600}
-
-.split{display:flex;height:14px;border-radius:4px;overflow:hidden;background:var(--surface-2);margin-top:6px}
-.split span{display:block;height:100%}
-#segU{background:var(--accent)}
-#segF{background:var(--warn)}
-.legend{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:2px;font-size:.78rem}
-.legend b{font-family:var(--f-mono);font-weight:600}
-.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
-.sw.u{background:var(--accent)}.sw.f{background:var(--warn)}
-.effnote{margin:4px 0 0;font-size:.76rem;color:var(--muted)}
-
-svg text{font-family:var(--f-mono)}
-.sky{fill:var(--sky)}
-.ground{fill:var(--ground)}
-.ramp{fill:var(--ramp)}
-.surf{stroke:var(--ink);stroke-width:3;stroke-linecap:round}
-.ticks{fill:none;stroke:var(--ink);stroke-width:1.5}
-.arc{fill:none;stroke:var(--ink);stroke-width:1.5}
-.hline{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:5 4;opacity:.7}
-.rope{stroke:var(--power);stroke-width:3.5;stroke-linecap:round}
-.motor{fill:var(--power);stroke:var(--ink);stroke-width:1.5}
-.motorTxt{fill:var(--on-power);font-size:16px;font-weight:600;text-anchor:middle;dominant-baseline:central}
-.blk{fill:var(--accent);stroke:var(--ink);stroke-width:1.5}
-.blkTxt{fill:var(--accent-ink);font-size:15px;font-weight:600}
-.lbl{fill:var(--ink);font-size:18px;font-weight:500}
-.lblp{fill:var(--power);font-size:18px;font-weight:600;text-anchor:middle;paint-order:stroke;stroke:var(--sky);stroke-width:4px}
-.gg{stroke:var(--grid);stroke-width:1}
-.gax{stroke:var(--muted);stroke-width:1.5}
-.gt{fill:var(--muted);font-size:10px}
-.gtitle{fill:var(--ink);font-family:var(--f-body);font-size:10.5px;font-weight:500}
-.gpred{stroke:var(--accent);stroke-width:2;stroke-dasharray:6 5;opacity:.55}
-.gtrace{stroke:var(--accent);stroke-width:3.5;stroke-linecap:round}
-.gghost{stroke:var(--muted);stroke-width:2;stroke-dasharray:3 4}
-.gdot{fill:var(--power);stroke:var(--surface);stroke-width:2}
-.gp{fill:var(--power);font-size:11px;font-weight:600}
-.gm{fill:var(--muted);font-size:10px}
-.shaft{fill:var(--surface);fill-opacity:.35;stroke:var(--ink);stroke-width:2}
-.pulley{fill:var(--surface-2);stroke:var(--ink);stroke-width:2}
-.cable{stroke:var(--ink);stroke-width:2}
-.boxA{fill:var(--accent);stroke:var(--ink);stroke-width:1.5}
-.boxB{fill:var(--power);stroke:var(--ink);stroke-width:1.5}
-.boxTxtA{fill:var(--accent-ink);font-size:14px;font-weight:600;text-anchor:middle;dominant-baseline:central}
-.boxTxtB{fill:var(--on-power);font-size:14px;font-weight:600;text-anchor:middle;dominant-baseline:central}
-.dim{stroke:var(--ink);stroke-width:1.5}
-.tm{fill:var(--ink);font-size:22px;font-weight:600;text-anchor:middle}
-.tm.done{fill:var(--good)}
-.cap{fill:var(--ink);font-size:19px;text-anchor:middle}
-.capA{fill:var(--ink);font-size:20px;font-weight:600;text-anchor:middle}
-
-.tbl{width:100%;border-collapse:collapse;font-size:.82rem}
-.tbl th,.tbl td{padding:5px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
-.tbl thead th{font-family:var(--f-display);font-size:1rem;font-weight:600;letter-spacing:.02em}
-.tbl .ca{color:var(--accent)}.tbl .cb{color:var(--power)}
-.tbl td{font-family:var(--f-mono);font-size:.78rem;text-align:right}
-.tbl thead th:not(:first-child){text-align:right}
-.tbl tbody th{font-weight:500;color:var(--muted);font-size:.76rem}
-
-@media (max-width: 1024px){
-  .sim{grid-template-columns:1fr; gap:12px}
-  .stage{height:auto; aspect-ratio: 16 / 10; min-height: 340px}
-  .hud{padding:5px 8px}
-  .hud dl{font-size:.76rem}
-  .big{font-size:2.2rem}
-  .conv{display:block}
-}
-@media (max-width: 640px){
-  body{padding:8px 8px 24px 8px}
-  .top{flex-direction:column; align-items:flex-start; gap:4px}
-  .formulas{gap:6px 12px}
-  .fx{font-size:1.15rem}
-  .stage{aspect-ratio: 4 / 3; min-height: 280px}
-  .hud{top:6px; left:6px; right:6px; position:absolute}
-  .hud-tl{top:6px; left:6px}
-  .hud-tr{top:auto; bottom:6px; left:6px; right:6px; display:flex; justify-content:space-between; align-items:center}
-  .hud dl{grid-template-columns: repeat(4, auto); gap:0 8px}
-  .hud dt{display:none}
-  .hud dd{font-size:.72rem}
-  .hud .lab-t{display:none}
-  .big{font-size:1.6rem}
-  .big .unit{font-size:1rem}
-  .conv{display:none}
-  .playbar{gap:6px}
-  .btn{padding:7px 12px; font-size:.82rem; flex:1; min-width:0}
-  .btn.primary{min-width:0}
-  .inline{width:100%; justify-content:space-between}
-}
-@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Potencia Mecánica</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para Gráficas en tiempo real -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome para Iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap');
+        html {
+                font-size: 18px;
+            }
+        body {
+            font-family: 'Roboto', sans-serif;
+            user-select: none;
+            background-color: #eef2f5;
+        }
+        .phet-card {
+            background: #ffffff;
+            border: 2px solid #0284c7;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .phet-header {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+        }
+        .phet-btn {
+            transition: all 0.15s ease;
+            box-shadow: 0 3px 0 #1d4ed8;
+        }
+        .phet-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #1d4ed8;
+        }
+        .phet-btn-orange {
+            background-color: #f97316;
+            box-shadow: 0 3px 0 #c2410c;
+        }
+        .phet-btn-orange:active {
+            box-shadow: 0 1px 0 #c2410c;
+        }
+        .phet-btn-green {
+            background-color: #22c55e;
+            box-shadow: 0 3px 0 #15803d;
+        }
+        .phet-btn-green:active {
+            box-shadow: 0 1px 0 #15803d;
+        }
+        input[type=range] {
+            accent-color: #0284c7;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+    <!-- Configuración y carga de MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
-<body>
-<div class="wrap">
-  <header class="top">
-    <h1>Laboratorio de Potencia Mecánica</h1>
-    <div class="formulas" aria-label="Fórmulas principales">
-      <span class="fx"><b>P</b> = W / t</span>
-      <span class="fx"><b>P</b> = F &middot; v</span>
-      <span class="units">1 kW = 1 000 W</span>
-      <span class="units">1 hp &approx; 745.7 W</span>
-      <span class="units">1 CV &approx; 735.5 W</span>
-    </div>
-  </header>
+<body class="h-screen flex flex-col overflow-hidden text-gray-800">
 
-  <div class="tabs" role="tablist" aria-label="Simulaciones">
-    <button class="tab" role="tab" id="tab-laboratorio" aria-controls="laboratorio" aria-selected="true" data-view="laboratorio" type="button">Rampa con motor</button>
-    <button class="tab" role="tab" id="tab-comparador" aria-controls="comparador" aria-selected="false" tabindex="-1" data-view="comparador" type="button">Dos máquinas</button>
-  </div>
-
-  <!-- ============ RAMPA CON MOTOR ============ -->
-  <section id="laboratorio" role="tabpanel" aria-labelledby="tab-laboratorio">
-    <div class="sim">
-      <div class="main">
-        <div class="stagebox">
-          <div class="stage">
-            <svg id="rampSvg" viewBox="100 10 650 380" preserveAspectRatio="xMidYMax meet" role="img" aria-label="Un motor tira de un bloque por una rampa inclinada">
-              <rect class="sky" x="-3000" y="-3000" width="7000" height="3330"></rect>
-              <polygon id="rampPoly" class="ramp" points="0,0 0,0 0,0"></polygon>
-              <path id="ticks" class="ticks" d=""></path>
-              <line id="surf" class="surf" x1="0" y1="0" x2="0" y2="0"></line>
-              <path id="angArc" class="arc" d=""></path>
-              <text id="angTxt" class="lbl" x="0" y="0"></text>
-              <line id="hLine" class="hline" x1="0" y1="0" x2="0" y2="0"></line>
-              <text id="hTxt" class="lbl" x="0" y="0"></text>
-              <line id="rope" class="rope" x1="0" y1="0" x2="0" y2="0"></line>
-              <circle id="motor" class="motor" cx="0" cy="0" r="14"></circle>
-              <text id="motorTxt" class="motorTxt" x="0" y="0">M</text>
-              <g id="blk">
-                <rect class="blk" x="-32" y="-42" width="64" height="40" rx="3"></rect>
-                <text id="blkTxt" class="blkTxt" x="0" y="-16" text-anchor="middle"></text>
-              </g>
-              <text id="fTxt" class="lblp" x="0" y="0"></text>
-            </svg>
-            <div class="hud hud-tl">
-              <dl>
-                <dt>Tiempo</dt><dd><span id="hT">0.0</span> s</dd>
-                <dt>Velocidad</dt><dd><span id="hV">0.0</span> m/s</dd>
-                <dt>Trabajo</dt><dd><span id="hW">0</span> J</dd>
-                <dt>Recorrido</dt><dd>10 m</dd>
-              </dl>
+    <!-- Header Principal -->
+    <header class="phet-header text-white px-4 py-2.5 flex justify-between items-center shadow-md z-10 flex-shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="bg-amber-400 text-blue-950 font-black px-2.5 py-0.5 rounded text-lg tracking-wider border-2 border-white shadow">
+                PhET<span class="text-xs align-top font-normal">like</span>
             </div>
-            <div class="hud hud-tr">
-              <div class="lab-t">Potencia del motor</div>
-              <div class="big"><span id="pBig">0</span><span class="unit">W</span></div>
-              <div class="conv"><b id="pKw">0</b> kW &middot; <b id="pHp">0</b> hp &middot; <span id="pBulbs"></span></div>
+            <h1 class="text-2xl font-black tracking-wide flex items-center gap-2">
+                <i class="fa-solid fa-bolt text-yellow-300"></i> Potencia Mecánica
+            </h1>
+        </div>
+
+        <!-- Pestañas de Navegación -->
+        <div class="flex bg-blue-900/40 p-1 rounded-lg gap-1 border border-blue-400/30 flex-wrap justify-center">
+            <button id="tab-horizontal-btn" onclick="switchTab('horizontal')" class="px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold transition bg-amber-400 text-blue-950 shadow">
+                <i class="fa-solid fa-arrows-left-right mr-1"></i> Plano Horizontal
+            </button>
+            <button id="tab-incline-btn" onclick="switchTab('incline')" class="px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold transition text-white hover:bg-white/10">
+                <i class="fa-solid fa-person-hiking mr-1"></i> Plano Inclinado
+            </button>
+            <button id="tab-vertical-btn" onclick="switchTab('vertical')" class="px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold transition text-white hover:bg-white/10">
+                <i class="fa-solid fa-arrow-up-from-ground-water mr-1"></i> Elevación Vertical
+            </button>
+            <button id="tab-graphs-btn" onclick="switchTab('graphs')" class="px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold transition text-white hover:bg-white/10">
+                <i class="fa-solid fa-chart-line mr-1"></i> Gráficas
+            </button>
+            <button id="tab-quiz-btn" onclick="switchTab('quiz')" class="px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold transition text-white hover:bg-white/10">
+                <i class="fa-solid fa-trophy mr-1"></i> Desafíos / Quiz
+            </button>
+        </div>
+
+        <!-- Control de Sonido -->
+        <div class="flex items-center gap-3">
+            <button id="sound-btn" onclick="toggleSound()" class="bg-blue-800/80 hover:bg-blue-700 text-white p-2 rounded-full w-9 h-9 flex items-center justify-center transition border border-blue-400/40" title="Activar/Desactivar Sonido">
+                <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="flex-1 flex overflow-hidden p-3 gap-3">
+
+        <!-- Canvas Principal -->
+        <main id="main-sim-container" class="flex-1 flex flex-col gap-3 min-w-0">
+            <div class="relative flex-1 bg-gradient-to-b from-sky-200 via-sky-100 to-amber-50 rounded-xl border-2 border-blue-400 overflow-hidden shadow-inner">
+                <canvas id="simCanvas" class="w-full h-full block"></canvas>
+
+                <!-- Visibilidad de Vectores e Instrumentos -->
+                <div class="absolute top-3 left-3 bg-white/95 backdrop-blur-sm p-3 rounded-xl border border-blue-200 shadow-md flex flex-col gap-1.5 text-xs font-semibold z-10">
+                    <span class="text-blue-900 font-extrabold border-b border-gray-200 pb-1 mb-0.5 flex items-center justify-between">
+                        <span>Vectores e Instrumentos</span>
+                        <i class="fa-solid fa-eye text-blue-500"></i>
+                    </span>
+                    <label class="flex items-center gap-2 cursor-pointer hover:text-blue-600">
+                        <input type="checkbox" id="chk-v-force" checked onchange="drawCanvas()" class="rounded text-blue-600">
+                        <span class="w-3 h-3 rounded-full bg-blue-600 inline-block"></span> Fuerza Aplicada ($F$) [N]
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:text-blue-600">
+                        <input type="checkbox" id="chk-v-disp" checked onchange="drawCanvas()" class="rounded text-green-600">
+                        <span class="w-3 h-3 rounded-full bg-green-600 inline-block"></span> Desplazamiento ($\Delta x$) [m]
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:text-blue-600">
+                        <input type="checkbox" id="chk-v-vel" checked onchange="drawCanvas()" class="rounded text-orange-500">
+                        <span class="w-3 h-3 rounded-full bg-orange-500 inline-block"></span> Velocidad ($v$) [m/s]
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:text-blue-600">
+                        <input type="checkbox" id="chk-fbd" onchange="drawCanvas()" class="rounded text-purple-600">
+                        <span class="w-3 h-3 rounded-full bg-purple-600 inline-block"></span> DCL (Cuerpo Libre)
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer hover:text-blue-600 border-t border-gray-100 pt-1">
+                        <input type="checkbox" id="chk-grid" checked onchange="drawCanvas()" class="rounded text-gray-500">
+                        <i class="fa-solid fa-ruler text-gray-500"></i> Regla graduada [m]
+                    </label>
+                </div>
+
+                <!-- Instrumentos Medidores Analógicos/Digitales -->
+                <div class="absolute top-3 right-3 flex gap-2 flex-wrap justify-end z-10">
+                    <!-- Potenciómetro -->
+                    <div class="bg-slate-900/90 text-white p-2.5 rounded-xl border border-slate-700 shadow-xl text-center w-36 backdrop-blur-sm">
+                        <div class="text-[10px] uppercase tracking-wider text-slate-400 font-extrabold flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-gauge-high text-yellow-400"></i> Potencia ($P$)
+                        </div>
+                        <div id="hud-power" class="text-xl font-black text-amber-400 my-0.5">0.0 <span class="text-xs font-semibold text-slate-300">W</span></div>
+                        <div class="flex justify-around text-[10px] text-emerald-400 font-bold border-t border-slate-700/80 pt-1">
+                            <span id="hud-kw">0.00 kW</span>
+                            <span>•</span>
+                            <span id="hud-hp">0.00 hp</span>
+                        </div>
+                        <div class="w-full bg-slate-700 h-2 rounded-full mt-1.5 overflow-hidden">
+                            <div id="hud-power-bar" class="bg-gradient-to-r from-amber-500 to-red-500 h-full w-0 transition-all duration-75"></div>
+                        </div>
+                    </div>
+
+                    <!-- Trabajo y Cronómetro -->
+                    <div class="bg-slate-900/90 text-white p-2.5 rounded-xl border border-slate-700 shadow-xl text-center w-36 backdrop-blur-sm">
+                        <div class="text-[10px] uppercase tracking-wider text-slate-400 font-extrabold flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-bolt text-cyan-400"></i> Trabajo ($W$)
+                        </div>
+                        <div id="hud-work" class="text-xl font-black text-cyan-400 my-0.5">0.0 <span class="text-xs font-semibold text-slate-300">J</span></div>
+                        <div class="flex justify-around text-[10px] text-cyan-300 font-semibold border-t border-slate-700/80 pt-1">
+                            <span id="hud-kj">0.00 kJ</span>
+                            <span>•</span>
+                            <span id="hud-time"><i class="fa-regular fa-clock mr-0.5"></i><span id="lbl-time">0.0</span> s</span>
+                        </div>
+                        <div class="w-full bg-slate-700 h-2 rounded-full mt-1.5 overflow-hidden">
+                            <div id="hud-work-bar" class="bg-cyan-500 h-full w-0 transition-all duration-75"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Banner Inferior de Indicadores en Vivo -->
+                <div class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-sm shadow-lg border border-blue-300 rounded-xl px-6 py-2 flex items-center gap-6 text-sm z-10">
+                    <div class="text-center">
+                        <span class="block text-[10px] text-gray-500 uppercase font-extrabold">Velocidad ($v$)</span>
+                        <span id="res-vel" class="text-base font-bold text-amber-600">0.00 m/s</span>
+                    </div>
+                    <div class="h-8 w-px bg-gray-200"></div>
+                    <div class="text-center">
+                        <span class="block text-[10px] text-gray-500 uppercase font-extrabold">Desplazamiento ($d$)</span>
+                        <span id="res-pos" class="text-base font-bold text-blue-600">0.00 m</span>
+                    </div>
+                    <div class="h-8 w-px bg-gray-200"></div>
+                    <div class="text-center">
+                        <span class="block text-[10px] text-gray-500 uppercase font-extrabold">Fuerza Eficaz ($F_{\parallel}$)</span>
+                        <span id="res-feff" class="text-base font-bold text-emerald-600">0.0 N</span>
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
 
-        <div class="ov ov-split">
-          <h2>¿A dónde va la potencia?</h2>
-          <div class="split" id="splitBar" role="img" aria-label="Reparto de la potencia entre útil y fricción"><span id="segU"></span><span id="segF"></span></div>
-          <ul class="legend">
-            <li><i class="sw u"></i>Útil, sube la carga: <b id="pU"></b></li>
-            <li><i class="sw f"></i>Fricción, se pierde: <b id="pF"></b></li>
-          </ul>
-          <p class="effnote" id="effNote"></p>
-        </div>
+            <!-- Control de Reproducción PhET -->
+            <div class="phet-card p-3 flex items-center justify-between gap-4 flex-wrap bg-white">
+                <div class="flex items-center gap-2">
+                    <button id="btn-play" onclick="togglePlay()" class="phet-btn phet-btn-green text-white font-bold px-5 py-2 rounded-lg flex items-center gap-2 text-base">
+                        <i id="icon-play" class="fa-solid fa-play"></i> <span id="txt-play">Iniciar</span>
+                    </button>
+                    <button onclick="stepSim()" class="phet-btn bg-slate-600 hover:bg-slate-700 text-white font-bold px-3.5 py-2 rounded-lg text-sm" title="Avanzar un Paso">
+                        <i class="fa-solid fa-step-forward"></i>
+                    </button>
+                    <button onclick="resetSim()" class="phet-btn phet-btn-orange text-white font-bold px-4 py-2 rounded-lg flex items-center gap-2 text-sm">
+                        <i class="fa-solid fa-rotate-left"></i> Reiniciar
+                    </button>
+                </div>
 
-        <div class="playbar">
-          <button class="btn primary" id="playBtn" type="button">Reproducir</button>
-          <button class="btn" id="resetBtn" type="button">Volver al inicio</button>
-          <label class="inline" for="speedSel">Velocidad:
-            <select id="speedSel">
-              <option value="0.5">&times;0.5 (lenta)</option>
-              <option value="1" selected>&times;1</option>
-              <option value="2">&times;2</option>
-              <option value="4">&times;4</option>
-            </select>
-          </label>
-        </div>
-      </div>
+                <!-- Velocidad de Simulación -->
+                <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-lg border border-slate-200">
+                    <span class="text-xs font-extrabold text-slate-600 pl-1">Simulación:</span>
+                    <button onclick="setSimSpeed(0.5)" id="spd-05" class="px-2.5 py-1 rounded text-xs font-bold text-slate-600 hover:bg-white">0.5x</button>
+                    <button onclick="setSimSpeed(1.0)" id="spd-10" class="px-2.5 py-1 rounded text-xs font-bold bg-blue-600 text-white">1.0x</button>
+                    <button onclick="setSimSpeed(2.0)" id="spd-20" class="px-2.5 py-1 rounded text-xs font-bold text-slate-600 hover:bg-white">2.0x</button>
+                </div>
 
-      <aside class="side" aria-label="Controles">
-        <button class="btn restore" id="restoreBtn" type="button">Restablecer valores</button>
-        <div class="box">
-          <div class="ctl"><label for="sm">Masa, m</label><output id="om" for="sm"></output>
-            <input type="range" id="sm" min="5" max="60" step="1" value="40"></div>
-          <div class="ctl"><label for="sth">Ángulo de la rampa, &theta;</label><output id="oth" for="sth"></output>
-            <input type="range" id="sth" min="0" max="35" step="1" value="25"></div>
-          <div class="ctl"><label for="smu">Coeficiente de fricción, &mu;</label><output id="omu" for="smu"></output>
-            <input type="range" id="smu" min="0" max="0.4" step="0.01" value="0.2"></div>
-          <div class="ctl"><label for="sv">Velocidad de subida, v</label><output id="ov" for="sv"></output>
-            <input type="range" id="sv" min="0.5" max="4" step="0.1" value="2"></div>
-          <p class="note">g = 9.8 m/s². El bloque sube a velocidad constante.</p>
-        </div>
-        <div class="box graphbox" id="ovGraph">
-          <div class="ovhead">
-            <h2>Trabajo acumulado en el tiempo</h2>
-            <button class="mini" id="saveBtn" type="button">Guardar</button>
-            <button class="mini" id="clearBtn" type="button">Borrar</button>
-            <label class="minchk" for="autoscale"><input type="checkbox" id="autoscale"> Auto</label>
-            <button class="mini" id="minGraph" type="button" aria-expanded="true" aria-controls="gBody" title="Mostrar u ocultar el gráfico">&minus;</button>
-          </div>
-          <div class="gbody" id="gBody">
-            <svg id="gSvg" viewBox="0 0 264 190" role="img" aria-label="Gráfico del trabajo realizado contra el tiempo; la pendiente es la potencia"></svg>
-          </div>
-        </div>
-        <details class="box">
-          <summary>Cálculo paso a paso</summary>
-          <ol class="steps">
-            <li><div><div class="step-name">Fuerza necesaria</div><div class="step-math" id="s1"></div></div></li>
-            <li><div><div class="step-name">Trabajo del motor</div><div class="step-math" id="s2"></div></div></li>
-            <li><div><div class="step-name">Tiempo de subida</div><div class="step-math" id="s3"></div></div></li>
-            <li class="hl"><div><div class="step-name">Potencia = trabajo / tiempo</div><div class="step-math" id="s4"></div></div></li>
-            <li><div><div class="step-name">Comprobación con F &middot; v</div><div class="step-math" id="s5"></div></div></li>
-          </ol>
-        </details>
-      </aside>
-    </div>
-  </section>
-
-  <!-- ============ DOS MÁQUINAS ============ -->
-  <section id="comparador" role="tabpanel" aria-labelledby="tab-comparador" hidden>
-    <div class="sim">
-      <div class="main">
-        <div class="stagebox">
-          <div class="stage">
-            <svg id="raceSvg" viewBox="80 0 800 540" preserveAspectRatio="xMidYMax meet" role="img" aria-label="Dos montacargas suben la misma carga a la misma altura con distinta potencia">
-              <rect class="sky" x="-3000" y="-3000" width="7000" height="3480"></rect>
-              <rect class="ground" x="-3000" y="480" width="7000" height="3000"></rect>
-              <line class="dim" x1="130" y1="480" x2="130" y2="150"></line>
-              <line class="dim" x1="120" y1="480" x2="140" y2="480"></line>
-              <line class="dim" x1="120" y1="150" x2="140" y2="150"></line>
-              <text id="cH" class="cap" transform="translate(106 315) rotate(-90)">h</text>
-              <rect class="shaft" x="254" y="70" width="92" height="410"></rect>
-              <rect class="shaft" x="614" y="70" width="92" height="410"></rect>
-              <circle class="pulley" cx="300" cy="60" r="14"></circle>
-              <circle class="pulley" cx="660" cy="60" r="14"></circle>
-              <line id="cabA" class="cable" x1="300" y1="74" x2="300" y2="104"></line>
-              <line id="cabB" class="cable" x1="660" y1="74" x2="660" y2="104"></line>
-              <rect id="boxA" class="boxA" x="268" y="434" width="64" height="46" rx="3"></rect>
-              <text id="boxTA" class="boxTxtA" x="300" y="457"></text>
-              <rect id="boxB" class="boxB" x="628" y="434" width="64" height="46" rx="3"></rect>
-              <text id="boxTB" class="boxTxtB" x="660" y="457"></text>
-              <text id="tmA" class="tm" x="300" y="38">t = 0.0 s</text>
-              <text id="tmB" class="tm" x="660" y="38">t = 0.0 s</text>
-              <text id="lbA" class="capA" x="300" y="518"></text>
-              <text id="lbB" class="capA" x="660" y="518"></text>
-            </svg>
-            <div class="hud hud-tl">
-              <dl>
-                <dt>Carga</dt><dd><span id="hcm">0</span> kg</dd>
-                <dt>Altura</dt><dd><span id="hch">0</span> m</dd>
-                <dt>Trabajo</dt><dd><span id="hcw">0</span> kJ</dd>
-              </dl>
+                <!-- Procedimiento Matemático -->
+                <button onclick="toggleMathModal()" class="px-4 py-2 bg-blue-100 text-blue-900 border border-blue-300 font-bold rounded-lg text-xs hover:bg-blue-200 transition flex items-center gap-2">
+                    <i class="fa-solid fa-square-root-variable text-blue-700 text-sm"></i>
+                    Desglose de Fórmulas y Paso a Paso
+                </button>
             </div>
-          </div>
-        </div>
-        <div class="playbar">
-          <button class="btn primary" id="cPlay" type="button">Iniciar carrera</button>
-          <button class="btn" id="cReset" type="button">Volver al inicio</button>
-          <p class="pnote" id="cNote"></p>
-          <p class="insight" id="cInsight"></p>
-        </div>
-      </div>
+        </main>
 
-      <aside class="side" aria-label="Controles">
-        <button class="btn restore" id="cRestore" type="button">Restablecer valores</button>
-        <div class="box">
-          <div class="ctl"><label for="cm">Masa de la carga, m</label><output id="ocm" for="cm"></output>
-            <input type="range" id="cm" min="100" max="1000" step="50" value="500"></div>
-          <div class="ctl"><label for="ch">Altura que se sube, h</label><output id="och" for="ch"></output>
-            <input type="range" id="ch" min="5" max="30" step="1" value="15"></div>
-          <div class="ctl"><label for="cpa">Potencia de la máquina A</label><output id="ocpa" for="cpa"></output>
-            <input type="range" id="cpa" min="0.5" max="10" step="0.1" value="1.5"></div>
-          <div class="ctl"><label for="cpb">Potencia de la máquina B</label><output id="ocpb" for="cpb"></output>
-            <input type="range" id="cpb" min="0.5" max="10" step="0.1" value="4"></div>
-          <p class="note">Toda la potencia se usa para elevar la carga a velocidad constante.</p>
-        </div>
-        <div class="box">
-          <div class="ttl">Resultados</div>
-          <table class="tbl">
-            <thead><tr><th scope="col"></th><th scope="col" class="ca">A</th><th scope="col" class="cb">B</th></tr></thead>
-            <tbody>
-              <tr><th scope="row">Potencia (kW)</th><td id="tPa"></td><td id="tPb"></td></tr>
-              <tr><th scope="row">Potencia (hp)</th><td id="tHa"></td><td id="tHb"></td></tr>
-              <tr><th scope="row">Trabajo m&middot;g&middot;h</th><td id="tWa"></td><td id="tWb"></td></tr>
-              <tr><th scope="row">Tiempo W / P</th><td id="tTa"></td><td id="tTb"></td></tr>
-              <tr><th scope="row">Velocidad</th><td id="tVa"></td><td id="tVb"></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </aside>
+        <!-- Pestaña de Gráficas -->
+        <main id="tab-graphs-container" class="hidden flex-1 flex flex-col gap-3 min-w-0">
+            <div class="phet-card p-4 flex-1 flex flex-col bg-white">
+                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                    <h2 class="text-lg font-bold text-blue-900 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-area text-blue-600"></i> Gráficas Dinámicas de Potencia y Trabajo
+                    </h2>
+                    <div class="flex gap-2">
+                        <button onclick="setGraphVariable('power')" id="btn-g-power" class="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-bold shadow-sm">Potencia P vs t [W]</button>
+                        <button onclick="setGraphVariable('work')" id="btn-g-work" class="px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-xs font-bold hover:bg-gray-300">Trabajo W vs t [J]</button>
+                        <button onclick="setGraphVariable('vel')" id="btn-g-vel" class="px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-xs font-bold hover:bg-gray-300">Velocidad v vs t [m/s]</button>
+                    </div>
+                </div>
+                <div class="flex-1 relative w-full h-full min-h-[300px]">
+                    <canvas id="realtimeChart"></canvas>
+                </div>
+            </div>
+        </main>
+
+        <!-- Pestaña de Desafíos / Quiz -->
+        <main id="tab-quiz-container" class="hidden flex-1 flex flex-col gap-3 min-w-0 overflow-y-auto">
+            <div class="phet-card p-6 max-w-3xl mx-auto w-full my-auto space-y-6 bg-white">
+                <div class="flex items-center justify-between border-b pb-4">
+                    <div>
+                        <span class="text-xs font-extrabold text-amber-600 uppercase tracking-widest">Evaluación de Conocimientos</span>
+                        <h2 class="text-2xl font-black text-slate-800">Desafíos de Potencia Mecánica</h2>
+                    </div>
+                    <div class="bg-amber-100 text-amber-900 font-extrabold px-4 py-2 rounded-xl text-lg flex items-center gap-2 border border-amber-300 shadow-sm">
+                        <i class="fa-solid fa-star text-amber-500"></i> Puntos: <span id="quiz-score">0</span>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50/80 border-2 border-blue-200 rounded-xl p-5 space-y-4">
+                    <div class="flex items-start gap-3">
+                        <div class="bg-blue-600 text-white p-3 rounded-xl font-black text-xl shadow">
+                            <i class="fa-solid fa-calculator"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-blue-950 text-lg" id="quiz-title">Cargando problema...</h3>
+                            <p class="text-slate-600 text-sm mt-1" id="quiz-desc">Realiza los cálculos correspondientes utilizando las unidades del Sistema Internacional.</p>
+                        </div>
+                    </div>
+
+                    <div id="quiz-params" class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-3 rounded-lg border border-blue-100 text-xs text-center font-mono font-semibold">
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 items-center justify-between bg-slate-50 p-4 rounded-xl border">
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <label for="quiz-answer" class="text-sm font-bold text-slate-700 whitespace-nowrap">Tu Respuesta:</label>
+                        <input type="number" id="quiz-answer" placeholder="0.00" step="0.1" class="border-2 border-slate-300 rounded-lg px-3 py-2 w-32 font-mono font-bold text-base focus:border-blue-500 outline-none">
+                        <span id="quiz-unit" class="text-sm font-extrabold text-slate-700 bg-gray-200 px-2.5 py-1 rounded">W</span>
+                    </div>
+
+                    <div class="flex gap-2 w-full sm:w-auto justify-end">
+                        <button onclick="checkQuizAnswer()" class="phet-btn phet-btn-green text-white font-bold px-6 py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 w-full sm:w-auto">
+                            <i class="fa-solid fa-check-circle"></i> Comprobar
+                        </button>
+                        <button onclick="generateQuizChallenge()" class="phet-btn bg-slate-600 text-white font-bold px-4 py-2.5 rounded-lg text-sm hover:bg-slate-700">
+                            Siguiente <i class="fa-solid fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="quiz-feedback" class="hidden p-4 rounded-xl text-sm font-bold flex items-center gap-3">
+                </div>
+            </div>
+        </main>
+
+        <!-- Panel Lateral de Parámetros Físicos -->
+        <aside id="panel-controls" class="w-80 flex flex-col gap-3 flex-shrink-0">
+            <div class="phet-card p-3 flex-1 flex flex-col justify-between overflow-y-auto bg-white">
+                <div class="space-y-4">
+                    <h3 class="text-sm font-black text-blue-900 uppercase tracking-wider border-b pb-1 flex items-center justify-between">
+                        <span>Parámetros Físicos</span>
+                        <i class="fa-solid fa-sliders text-blue-600"></i>
+                    </h3>
+
+                    <!-- Masa (kg) -->
+                    <div>
+                        <div class="flex justify-between items-center text-xs font-bold mb-1">
+                            <label for="input-mass" class="text-slate-700">Masa Objeto ($m$):</label>
+                            <span class="text-blue-700 font-mono text-sm"><span id="val-mass">50</span> kg</span>
+                        </div>
+                        <input type="range" id="input-mass" min="5" max="300" step="5" value="50" oninput="updateControls()" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Fuerza Aplicada (N) -->
+                    <div>
+                        <div class="flex justify-between items-center text-xs font-bold mb-1">
+                            <label for="input-force" class="text-slate-700">Fuerza Aplicada ($F$):</label>
+                            <span class="text-blue-700 font-mono text-sm"><span id="val-force">300</span> N</span>
+                        </div>
+                        <input type="range" id="input-force" min="0" max="1500" step="10" value="300" oninput="updateControls()" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Desplazamiento (m) -->
+                    <div>
+                        <div class="flex justify-between items-center text-xs font-bold mb-1">
+                            <label for="input-dist" class="text-slate-700" id="lbl-dist-title">Desplazamiento ($d$):</label>
+                            <span class="text-blue-700 font-mono text-sm"><span id="val-dist">10</span> m</span>
+                        </div>
+                        <input type="range" id="input-dist" min="2" max="40" step="1" value="10" oninput="updateControls()" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Tiempo (s) -->
+                    <div>
+                        <div class="flex justify-between items-center text-xs font-bold mb-1">
+                            <label for="input-time" class="text-slate-700">Tiempo Destinado ($t$):</label>
+                            <span class="text-blue-700 font-mono text-sm"><span id="val-time">5.0</span> s</span>
+                        </div>
+                        <input type="range" id="input-time" min="1" max="25" step="0.5" value="5" oninput="updateControls()" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Ángulo Fuerza (°) en Plano Horizontal -->
+                    <div id="wrapper-angle">
+                        <div class="flex justify-between items-center text-xs font-bold mb-1">
+                            <label for="input-angle" class="text-slate-700">Ángulo de Fuerza ($\theta$):</label>
+                            <span class="text-blue-700 font-mono text-sm"><span id="val-angle">0</span>°</span>
+                        </div>
+                        <input type="range" id="input-angle" min="0" max="75" step="5" value="0" oninput="updateControls()" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Inclinación Rampa (α) en Plano Inclinado -->
+                    <div id="wrapper-incline-angle" class="hidden">
+                        <div class="flex justify-between items-center text-xs font-bold mb-1">
+                            <label for="input-incline-angle" class="text-slate-700">Inclinación Rampa ($\alpha$):</label>
+                            <span class="text-blue-700 font-mono text-sm"><span id="val-incline-angle">30</span>°</span>
+                        </div>
+                        <input type="range" id="input-incline-angle" min="0" max="60" step="5" value="30" oninput="updateControls()" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Coeficiente de Fricción (μ) -->
+                    <div id="wrapper-friction">
+                        <div class="flex justify-between items-center text-xs font-bold mb-1">
+                            <label for="input-friction" class="text-slate-700">Fricción / Rozamiento ($\mu$):</label>
+                            <span class="text-blue-700 font-mono text-sm" id="val-friction">0.10</span>
+                        </div>
+                        <input type="range" id="input-friction" min="0" max="0.6" step="0.05" value="0.1" oninput="updateControls()" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Cuadro Resumen Estático -->
+                <div class="mt-4 bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs">
+                    <div class="font-extrabold text-blue-900 border-b pb-1 flex justify-between">
+                        <span>Resumen Estático ($g = 9.8\text{ m/s}^2$)</span>
+                        <i class="fa-solid fa-square-poll-vertical"></i>
+                    </div>
+                    <div class="flex justify-between text-slate-600">
+                        <span>Peso Objeto ($P_g = m \cdot g$):</span>
+                        <span class="font-mono font-bold" id="calc-weight">490.0 N</span>
+                    </div>
+                    <div id="row-px" class="flex justify-between text-slate-600 hidden">
+                        <span>Componente Peso ($P_x$):</span>
+                        <span class="font-mono font-bold text-purple-700" id="calc-px">245.0 N</span>
+                    </div>
+                    <div class="flex justify-between text-slate-600">
+                        <span>Fuerza Rozamiento ($f_k$):</span>
+                        <span class="font-mono font-bold text-amber-700" id="calc-friction">49.0 N</span>
+                    </div>
+                    <div class="flex justify-between text-slate-600">
+                        <span>Fuerza Neta ($F_{net}$):</span>
+                        <span class="font-mono font-bold text-blue-700" id="calc-fnet">251.0 N</span>
+                    </div>
+                    <div class="flex justify-between text-slate-600 border-t pt-1">
+                        <span>Aceleración Requerida ($a$):</span>
+                        <span class="font-mono font-bold text-slate-800" id="calc-acc">5.02 m/s²</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
     </div>
-  </section>
-</div>
 
-<script>
-(function(){
-'use strict';
-var G = 9.8, D = 10, HP = 745.7;
-var $ = function(id){ return document.getElementById(id); };
+    <!-- Modal para Desglose Matemático -->
+    <div id="math-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white border-2 border-blue-500 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-xl font-black text-blue-950 flex items-center gap-2">
+                    <i class="fa-solid fa-square-root-variable text-blue-600"></i> Desarrollo Matemático de Potencia Mecánica
+                </h3>
+                <button onclick="toggleMathModal()" class="text-gray-400 hover:text-gray-700 text-xl font-bold">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
 
-function fmt(n, d){
-  if (d === undefined) d = 0;
-  if (!isFinite(n)) return '-';
-  var s = Math.abs(n).toFixed(d);
-  var neg = n < 0 && Number(s) !== 0;
-  var parts = s.split('.');
-  var i = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  return (neg ? '-' : '') + i + (parts[1] ? '.' + parts[1] : '');
-}
-function fp(n){ return fmt(n, n >= 100 ? 0 : (n >= 10 ? 1 : 2)); }
-function niceScale(max, n){
-  var raw = max / n;
-  var p = Math.pow(10, Math.floor(Math.log10(raw)));
-  var f = raw / p;
-  var m = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
-  var step = m * p;
-  return { step: step, max: Math.ceil(max / step - 1e-9) * step };
-}
-function decFor(step){
-  if (step % 1 === 0) return 0;
-  return Math.abs((step * 10) % 1) < 1e-9 ? 1 : 2;
-}
+            <div class="space-y-4 text-sm sm:text-base text-slate-800 leading-relaxed">
+                <div class="bg-blue-50 p-3 rounded-xl border border-blue-200">
+                    <h4 class="font-extrabold text-blue-900 text-base mb-1">1. Ecuación de Trabajo Mecánico ($W$)</h4>
+                    <p class="font-mono">$$W = F_{\parallel} \cdot d$$</p>
+                    <p class="mt-1 text-slate-600">Donde $F_{\parallel}$ es la componente eficaz de la fuerza en la dirección del movimiento (en Newtons, $N$) y $d$ es el desplazamiento en metros ($m$). Resultado en <strong>Joules ($J$)</strong>.</p>
+                </div>
 
-var views = ['laboratorio', 'comparador'];
-function show(v){
-  if (views.indexOf(v) < 0) v = 'laboratorio';
-  views.forEach(function(x){
-    $(x).hidden = (x !== v);
-    var tb = $('tab-' + x);
-    tb.setAttribute('aria-selected', String(x === v));
-    tb.tabIndex = (x === v) ? 0 : -1;
-  });
-  if (v === 'laboratorio') renderLab();
-  if (v === 'comparador') renderCmp();
-}
-Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(b, idx, all){
-  b.addEventListener('click', function(){ show(b.getAttribute('data-view')); });
-  b.addEventListener('keydown', function(e){
-    var k = e.key, j = -1;
-    if (k === 'ArrowRight') j = (idx + 1) % all.length;
-    if (k === 'ArrowLeft') j = (idx - 1 + all.length) % all.length;
-    if (j >= 0){ e.preventDefault(); show(all[j].getAttribute('data-view')); all[j].focus(); }
-  });
-});
+                <div class="bg-amber-50 p-3 rounded-xl border border-amber-200">
+                    <h4 class="font-extrabold text-amber-900 text-base mb-1">2. Ecuación de Potencia Mecánica ($P$)</h4>
+                    <p class="font-mono">$$P = \frac{W}{t} = F_{\parallel} \cdot v$$</p>
+                    <p class="mt-1 text-slate-600">Donde $t$ es el tiempo en segundos ($s$) y $v$ es la velocidad media en $m/s$. Resultado en <strong>Watts ($W$)</strong>.</p>
+                </div>
 
-var LDEF = { m: 40, th: 25, mu: 0.2, v: 2 };
-var L = { m: 40, th: 25, mu: 0.2, v: 2, t: 0, running: false, speed: 1, ghost: null };
+                <div class="bg-purple-50 p-3 rounded-xl border border-purple-200">
+                    <h4 class="font-extrabold text-purple-900 text-base mb-1">3. Componentes en Plano Inclinado</h4>
+                    <p class="font-mono">$$P_x = m \cdot g \cdot \sin(\alpha) \quad \text{y} \quad P_y = m \cdot g \cdot \cos(\alpha)$$</p>
+                    <p class="font-mono">$$N = P_y = m \cdot g \cdot \cos(\alpha) \quad \Rightarrow \quad f_k = \mu \cdot N$$</p>
+                </div>
 
-function labCalc(){
-  var r = L.th * Math.PI / 180, s = Math.sin(r), c = Math.cos(r);
-  var Fg = L.m * G * s, Ff = L.mu * L.m * G * c, F = Fg + Ff;
-  return { r: r, s: s, c: c, Fg: Fg, Ff: Ff, F: F, T: D / L.v, W: F * D, P: F * L.v, Pu: Fg * L.v, Pf: Ff * L.v };
-}
-L.t = 0.45 * labCalc().T;
+                <div class="bg-slate-100 p-4 rounded-xl space-y-2 border">
+                    <h4 class="font-extrabold text-slate-900 border-b pb-1">Sustitución Actual en Vivo con Unidades:</h4>
+                    <div id="math-step-by-step" class="font-mono text-xs leading-relaxed space-y-1 text-blue-950">
+                    </div>
+                </div>
+            </div>
 
-function syncLabInputs(){
-  $('sm').value = L.m; $('sth').value = L.th; $('smu').value = L.mu; $('sv').value = L.v;
-}
-[['sm', 'm'], ['sth', 'th'], ['smu', 'mu'], ['sv', 'v']].forEach(function(pair){
-  $(pair[0]).addEventListener('input', function(e){
-    var p = L.t / labCalc().T;
-    L[pair[1]] = parseFloat(e.target.value);
-    L.t = p * labCalc().T;
-    renderLab();
-  });
-});
-$('speedSel').addEventListener('change', function(e){ L.speed = parseFloat(e.target.value); });
-$('playBtn').addEventListener('click', function(){
-  if (L.running){ L.running = false; }
-  else { if (L.t >= labCalc().T - 1e-9) L.t = 0; L.running = true; }
-  renderLab();
-});
-$('resetBtn').addEventListener('click', function(){ L.t = 0; L.running = false; renderLab(); });
-$('restoreBtn').addEventListener('click', function(){
-  L.m = LDEF.m; L.th = LDEF.th; L.mu = LDEF.mu; L.v = LDEF.v;
-  L.t = 0; L.running = false; L.ghost = null;
-  $('autoscale').checked = false;
-  syncLabInputs();
-  renderLab();
-});
-$('saveBtn').addEventListener('click', function(){
-  var c = labCalc();
-  L.ghost = { T: c.T, W: c.W, P: c.P };
-  renderLab();
-});
-$('clearBtn').addEventListener('click', function(){ L.ghost = null; renderLab(); });
-$('autoscale').addEventListener('change', function(){ renderLab(); });
-$('minGraph').addEventListener('click', function(){
-  var body = $('gBody');
-  body.hidden = !body.hidden;
-  $('minGraph').textContent = body.hidden ? '+' : '-';
-  $('minGraph').setAttribute('aria-expanded', String(!body.hidden));
-  if (!body.hidden) renderLab();
-});
+            <div class="text-right pt-2 border-t">
+                <button onclick="toggleMathModal()" class="phet-btn bg-blue-600 text-white font-bold px-5 py-2 rounded-lg text-xs">Entendido</button>
+            </div>
+        </div>
+    </div>
 
-function drawRamp(c, s){
-  var X0 = 170, Y0 = 330, LV = 480, SP0 = 40, SP1 = LV - 62;
-  var cs = c.c, sn = c.s;
-  var xe = X0 + LV * cs, ye = Y0 - LV * sn;
-  $('rampPoly').setAttribute('points', X0 + ',' + Y0 + ' ' + xe.toFixed(1) + ',' + Y0 + ' ' + xe.toFixed(1) + ',' + ye.toFixed(1));
-  var surf = $('surf');
-  surf.setAttribute('x1', X0); surf.setAttribute('y1', Y0);
-  surf.setAttribute('x2', xe.toFixed(1)); surf.setAttribute('y2', ye.toFixed(1));
+    <!-- JavaScript Principal -->
+    <script>
+        // --- ESTADO GLOBAL ---
+        const state = {
+            mode: 'horizontal', // 'horizontal' | 'incline' | 'vertical'
+            activeTab: 'horizontal',
+            isPlaying: false,
+            soundEnabled: true,
+            simSpeed: 1.0,
 
-  var nx = -sn, ny = -cs;
-  var tk = '', i, spi, bx, by, len;
-  for (i = 0; i <= D; i++){
-    spi = SP0 + i * (SP1 - SP0) / D;
-    bx = X0 + spi * cs; by = Y0 - spi * sn;
-    len = (i === 0 || i === D || i === D / 2) ? 14 : 8;
-    tk += 'M' + bx.toFixed(1) + ' ' + by.toFixed(1) + 'L' + (bx - nx * len).toFixed(1) + ' ' + (by - ny * len).toFixed(1);
-  }
-  $('ticks').setAttribute('d', tk);
+            // Magnitudes Físicas
+            mass: 50,           // kg
+            force: 300,         // N
+            distance: 10,       // m
+            targetTime: 5.0,    // s
+            angle: 0,           // grados ° (Ángulo de tirón en plano horizontal)
+            inclineAngle: 30,   // grados α (Inclinación rampa en plano inclinado)
+            frictionCoeff: 0.1, // μ (Adimensional)
+            g: 9.8,             // m/s²
 
-  var sp = SP0 + (s / D) * (SP1 - SP0);
-  var px = X0 + sp * cs, py = Y0 - sp * sn;
-  $('blk').setAttribute('transform', 'translate(' + px.toFixed(1) + ' ' + py.toFixed(1) + ') rotate(' + (-L.th) + ')');
-  $('blkTxt').textContent = L.m + ' kg';
+            // Dinámica
+            posX: 0,            // m
+            velX: 0,            // m/s
+            elapsedTime: 0,     // s
+            workDone: 0,        // J
+            currentPower: 0,    // W
 
-  var sx = px + 32 * cs + 20 * nx, sy = py - 32 * sn + 20 * ny;
-  var mx = xe + 20 * nx, my = ye + 20 * ny;
-  var rope = $('rope');
-  rope.setAttribute('x1', sx.toFixed(1)); rope.setAttribute('y1', sy.toFixed(1));
-  rope.setAttribute('x2', mx.toFixed(1)); rope.setAttribute('y2', my.toFixed(1));
-  $('motor').setAttribute('cx', mx.toFixed(1)); $('motor').setAttribute('cy', my.toFixed(1));
-  $('motorTxt').setAttribute('x', mx.toFixed(1)); $('motorTxt').setAttribute('y', my.toFixed(1));
-  var ft = $('fTxt');
-  ft.setAttribute('x', ((sx + mx) / 2 + nx * 24).toFixed(1));
-  ft.setAttribute('y', ((sy + my) / 2 + ny * 24).toFixed(1));
-  ft.textContent = 'F = ' + fmt(c.F, 0) + ' N';
+            // Gráficas
+            chart: null,
+            chartVar: 'power',
+            chartDataHistory: { time: [], power: [], work: [], vel: [] },
 
-  var hl = $('hLine'), ht = $('hTxt');
-  var hMeters = s * sn;
-  if (Y0 - py > 6){
-    hl.setAttribute('x1', px.toFixed(1)); hl.setAttribute('y1', py.toFixed(1));
-    hl.setAttribute('x2', px.toFixed(1)); hl.setAttribute('y2', Y0);
-    hl.style.display = '';
-  } else { hl.style.display = 'none'; }
-  if (Y0 - py > 46){
-    ht.setAttribute('x', (px + 10).toFixed(1)); ht.setAttribute('y', ((py + Y0) / 2 + 7).toFixed(1));
-    ht.textContent = 'h = ' + fmt(hMeters, 1) + ' m';
-    ht.style.display = '';
-  } else { ht.style.display = 'none'; }
+            // Quiz
+            quizScore: 0,
+            currentChallenge: null
+        };
 
-  var arc = $('angArc');
-  if (L.th > 0){
-    arc.setAttribute('d', 'M ' + (X0 + 60) + ' ' + Y0 + ' A 60 60 0 0 0 ' + (X0 + 60 * cs).toFixed(1) + ' ' + (Y0 - 60 * sn).toFixed(1));
-  } else { arc.setAttribute('d', ''); }
-  var at = $('angTxt');
-  at.setAttribute('x', X0 + 70); at.setAttribute('y', Y0 - 12);
-  at.textContent = '\u03b8 = ' + L.th + '\u00b0';
-}
+        // --- SINTETIZADOR WEB AUDIO API ---
+        let audioCtx = null;
+        function playSound(type) {
+            if (!state.soundEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
 
-function drawGraph(c){
-  if ($('gBody').hidden) return;
-  var svg = $('gSvg');
-  var rect = svg.getBoundingClientRect();
-  var Wc = Math.round(rect.width) || 264;
-  var Hc = Math.round(rect.height) || 190;
-  var ml = 48, mr = 10, mt = 8, mb = 26;
-  var pw = Wc - ml - mr, ph = Hc - mt - mb;
-  svg.setAttribute('viewBox', '0 0 ' + Wc + ' ' + Hc);
-  var xs, ys;
-  if ($('autoscale').checked){
-    xs = niceScale(c.T * 1.1, 5);
-    ys = niceScale(Math.max(c.W, 1) * 1.1, 4);
-  } else { xs = { step: 5, max: 20 }; ys = { step: 1500, max: 6000 }; }
-  function X(t){ return ml + t / xs.max * pw; }
-  function Y(w){ return mt + ph - w / ys.max * ph; }
-  var h = '<defs><clipPath id="pclip"><rect x="' + ml + '" y="' + mt + '" width="' + pw + '" height="' + ph + '"></rect></clipPath></defs>';
-  var nx = Math.round(xs.max / xs.step), ny = Math.round(ys.max / ys.step), i;
-  var dx = decFor(xs.step), dy = decFor(ys.step);
-  for (i = 0; i <= nx; i++){
-    var tx = i * xs.step, xp = X(tx);
-    h += '<line class="gg" x1="' + xp.toFixed(1) + '" y1="' + mt + '" x2="' + xp.toFixed(1) + '" y2="' + (mt + ph) + '"></line>';
-    h += '<text class="gt" x="' + xp.toFixed(1) + '" y="' + (mt + ph + 12) + '" text-anchor="middle">' + fmt(tx, dx) + '</text>';
-  }
-  for (i = 0; i <= ny; i++){
-    var wy = i * ys.step, yp = Y(wy);
-    h += '<line class="gg" x1="' + ml + '" y1="' + yp.toFixed(1) + '" x2="' + (ml + pw) + '" y2="' + yp.toFixed(1) + '"></line>';
-    h += '<text class="gt" x="' + (ml - 5) + '" y="' + (yp + 3).toFixed(1) + '" text-anchor="end">' + fmt(wy, dy) + '</text>';
-  }
-  h += '<line class="gax" x1="' + ml + '" y1="' + (mt + ph) + '" x2="' + (ml + pw) + '" y2="' + (mt + ph) + '"></line>';
-  h += '<line class="gax" x1="' + ml + '" y1="' + mt + '" x2="' + ml + '" y2="' + (mt + ph) + '"></line>';
-  h += '<text class="gtitle" x="' + (ml + pw / 2) + '" y="' + (Hc - 3) + '" text-anchor="middle">Tiempo t (s)</text>';
-  h += '<text class="gtitle" transform="translate(10 ' + (mt + ph / 2) + ') rotate(-90)" text-anchor="middle">Trabajo W (J)</text>';
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
 
-  h += '<g clip-path="url(#pclip)">';
-  if (L.ghost){
-    h += '<line class="gghost" x1="' + X(0).toFixed(1) + '" y1="' + Y(0).toFixed(1) + '" x2="' + X(L.ghost.T).toFixed(1) + '" y2="' + Y(L.ghost.W).toFixed(1) + '"></line>';
-  }
-  h += '<line class="gpred" x1="' + X(0).toFixed(1) + '" y1="' + Y(0).toFixed(1) + '" x2="' + X(c.T).toFixed(1) + '" y2="' + Y(c.W).toFixed(1) + '"></line>';
-  var tn = Math.min(L.t, c.T), wn = c.F * L.v * tn;
-  h += '<line class="gtrace" x1="' + X(0).toFixed(1) + '" y1="' + Y(0).toFixed(1) + '" x2="' + X(tn).toFixed(1) + '" y2="' + Y(wn).toFixed(1) + '"></line>';
-  h += '<circle class="gdot" cx="' + X(tn).toFixed(1) + '" cy="' + Y(wn).toFixed(1) + '" r="4.5"></circle>';
-  h += '</g>';
+                const now = audioCtx.currentTime;
 
-  var lx = Math.min(X(c.T * 0.5) + 8, ml + pw - 140);
-  var ly = Math.min(Y(c.W * 0.5) + 16, mt + ph - 6);
-  h += '<text class="gp" x="' + Math.max(lx, ml + 4).toFixed(1) + '" y="' + ly.toFixed(1) + '">P = ' + fp(c.P) + ' W</text>';
-  if (L.ghost){
-    h += '<text class="gm" x="' + (ml + 6) + '" y="' + (mt + 12) + '">- - guardada: ' + fp(L.ghost.P) + ' W</text>';
-  }
-  svg.innerHTML = h;
-}
+                if (type === 'tick') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, now);
+                    gain.gain.setValueAtTime(0.04, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+                    osc.start(now);
+                    osc.stop(now + 0.04);
+                } else if (type === 'success') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.1);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'motor') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(50 + Math.min(state.currentPower / 8, 180), now);
+                    gain.gain.setValueAtTime(0.015, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+                    osc.start(now);
+                    osc.stop(now + 0.06);
+                }
+            } catch(e) {}
+        }
 
-function renderLab(){
-  var c = labCalc();
-  if (L.t > c.T) L.t = c.T;
-  if (L.t < 0) L.t = 0;
-  var s = L.v * L.t;
-  $('om').textContent = L.m + ' kg';
-  $('oth').textContent = L.th + '\u00b0';
-  $('omu').textContent = L.mu.toFixed(2);
-  $('ov').textContent = L.v.toFixed(1) + ' m/s';
+        function toggleSound() {
+            state.soundEnabled = !state.soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            icon.className = state.soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark text-red-400';
+        }
 
-  drawRamp(c, s);
-  drawGraph(c);
+        // --- CÁLCULOS FÍSICOS CON UNIDADES SI ---
+        function computePhysics() {
+            const weight = state.mass * state.g; // N
 
-  $('hT').textContent = fmt(L.t, 1);
-  $('hV').textContent = fmt(L.v, 1);
-  $('hW').textContent = fmt(c.F * s);
-  $('playBtn').textContent = L.running ? 'Pausar' : (L.t >= c.T - 1e-9 ? 'Repetir' : 'Reproducir');
+            let fEff = 0;    // N (Fuerza eficaz de tracción en la dirección del movimiento)
+            let fFrict = 0;  // N (Fuerza de fricción resistiva)
+            let fNet = 0;    // N (Fuerza neta aceleradora)
+            let px = 0;      // N (Componente del peso paralela en plano inclinado)
+            let py = weight; // N (Componente del peso perpendicular)
+            let fNormal = weight; // N
 
-  $('pBig').textContent = fp(c.P);
-  $('pKw').textContent = fmt(c.P / 1000, 3);
-  $('pHp').textContent = fmt(c.P / HP, 2);
-  var bulbs = c.P / 100;
-  $('pBulbs').textContent = bulbs < 1 ? '< 1 foco de 100 W' : '\u2248 ' + fmt(bulbs, 1) + ' focos';
+            if (state.mode === 'horizontal') {
+                const rad = state.angle * Math.PI / 180;
+                fEff = state.force * Math.cos(rad);
+                fNormal = Math.max(0, weight - state.force * Math.sin(rad));
+                const fFrictMax = state.frictionCoeff * fNormal;
 
-  $('s1').textContent = 'F = m\u00b7g\u00b7(sen \u03b8 + \u03bc\u00b7cos \u03b8) = ' + fmt(c.F, 1) + ' N';
-  $('s2').textContent = 'W = F\u00b7d = ' + fmt(c.F, 1) + ' N \u00d7 ' + D + ' m = ' + fmt(c.W) + ' J';
-  $('s3').textContent = 't = d / v = ' + D + ' m \u00f7 ' + fmt(L.v, 1) + ' m/s = ' + fmt(c.T, 1) + ' s';
-  $('s4').textContent = 'P = W / t = ' + fmt(c.W) + ' J \u00f7 ' + fmt(c.T, 1) + ' s = ' + fp(c.P) + ' W';
-  $('s5').textContent = 'P = F\u00b7v = ' + fmt(c.F, 1) + ' N \u00d7 ' + fmt(L.v, 1) + ' m/s = ' + fp(c.P) + ' W';
+                if (state.velX > 0) {
+                    fFrict = fFrictMax;
+                    fNet = fEff - fFrict;
+                } else {
+                    fFrict = Math.min(fEff, fFrictMax);
+                    fNet = Math.max(0, fEff - fFrictMax);
+                }
+            } else if (state.mode === 'incline') {
+                const alphaRad = state.inclineAngle * Math.PI / 180;
+                px = weight * Math.sin(alphaRad);
+                py = weight * Math.cos(alphaRad);
+                fNormal = py;
+                fEff = state.force; // Fuerza paralela a la rampa
 
-  var pctU = c.F > 0 ? c.Fg / c.F * 100 : 0;
-  var pctF = c.F > 0 ? 100 - pctU : 0;
-  $('segU').style.width = pctU.toFixed(1) + '%';
-  $('segF').style.width = pctF.toFixed(1) + '%';
-  $('pU').textContent = fp(c.Pu) + ' W';
-  $('pF').textContent = fp(c.Pf) + ' W';
-  var note;
-  if (c.F <= 0) note = 'No hay nada que vencer: la potencia necesaria es 0 W.';
-  else if (L.th === 0) note = 'Rampa horizontal: la carga no gana altura y toda la potencia se pierde en friccion.';
-  else note = 'Eficiencia: ' + fmt(pctU) + ' %. Solo la parte util aumenta la energia potencial (m\u00b7g\u00b7h).';
-  $('effNote').textContent = note;
-}
+                const fFrictMax = state.frictionCoeff * fNormal;
+                const totalOpposing = px + fFrictMax;
 
-var CDEF = { m: 500, h: 15, pa: 1.5, pb: 4 };
-var C = { m: 500, h: 15, pa: 1.5, pb: 4, t: 0, running: false };
-function cCalc(){
-  var W = C.m * G * C.h;
-  var ta = W / (C.pa * 1000), tb = W / (C.pb * 1000);
-  return { W: W, ta: ta, tb: tb, tmax: Math.max(ta, tb) };
-}
-C.t = 0.4 * cCalc().tmax;
+                if (state.velX > 0) {
+                    fFrict = fFrictMax;
+                    fNet = fEff - px - fFrict;
+                } else {
+                    // En reposo, la fricción pasiva no genera aceleración hacia atrás
+                    const neededFriction = Math.max(0, fEff - px);
+                    fFrict = Math.min(neededFriction, fFrictMax);
+                    fNet = Math.max(0, fEff - px - fFrictMax);
+                }
+            } else { // vertical
+                fEff = state.force;
+                fFrict = 0;
+                if (state.velX > 0) {
+                    fNet = fEff - weight;
+                } else {
+                    fNet = Math.max(0, fEff - weight);
+                }
+            }
 
-function syncCmpInputs(){
-  $('cm').value = C.m; $('ch').value = C.h; $('cpa').value = C.pa; $('cpb').value = C.pb;
-}
-[['cm', 'm'], ['ch', 'h'], ['cpa', 'pa'], ['cpb', 'pb']].forEach(function(pair){
-  $(pair[0]).addEventListener('input', function(e){
-    var p = C.t / cCalc().tmax;
-    C[pair[1]] = parseFloat(e.target.value);
-    C.t = p * cCalc().tmax;
-    renderCmp();
-  });
-});
-$('cPlay').addEventListener('click', function(){
-  if (C.running){ C.running = false; }
-  else { if (C.t >= cCalc().tmax - 1e-9) C.t = 0; C.running = true; }
-  renderCmp();
-});
-$('cReset').addEventListener('click', function(){ C.t = 0; C.running = false; renderCmp(); });
-$('cRestore').addEventListener('click', function(){
-  C.m = CDEF.m; C.h = CDEF.h; C.pa = CDEF.pa; C.pb = CDEF.pb;
-  C.t = 0; C.running = false;
-  syncCmpInputs();
-  renderCmp();
-});
+            const accel = fNet / state.mass; // m/s²
+            const workTotal = fEff * state.distance; // J
+            const avgPower = workTotal / state.targetTime; // W
 
-function renderCmp(){
-  var k = cCalc();
-  if (C.t > k.tmax) C.t = k.tmax;
-  $('ocm').textContent = C.m + ' kg';
-  $('och').textContent = C.h + ' m';
-  $('ocpa').textContent = C.pa.toFixed(1) + ' kW';
-  $('ocpb').textContent = C.pb.toFixed(1) + ' kW';
-  $('cH').textContent = 'h = ' + C.h + ' m';
-  $('hcm').textContent = fmt(C.m);
-  $('hch').textContent = C.h;
-  $('hcw').textContent = fmt(k.W / 1000, 1);
+            return { weight, px, py, fNormal, fEff, fFrict, fNet, accel, workTotal, avgPower };
+        }
 
-  var fa = Math.min(1, C.t / k.ta), fb = Math.min(1, C.t / k.tb);
-  [['A', fa, k.ta], ['B', fb, k.tb]].forEach(function(r){
-    var bottom = 480 - r[1] * 330;
-    $('box' + r[0]).setAttribute('y', (bottom - 46).toFixed(1));
-    $('boxT' + r[0]).setAttribute('y', (bottom - 23).toFixed(1));
-    $('boxT' + r[0]).textContent = C.m + ' kg';
-    $('cab' + r[0]).setAttribute('y2', (bottom - 46).toFixed(1));
-    var tm = $('tm' + r[0]);
-    if (r[1] >= 1){ tm.textContent = 'Listo en ' + fmt(r[2], 1) + ' s'; tm.setAttribute('class', 'tm done'); }
-    else { tm.textContent = 't = ' + fmt(Math.min(C.t, r[2]), 1) + ' s'; tm.setAttribute('class', 'tm'); }
-  });
-  $('lbA').textContent = 'Maquina A \u00b7 ' + C.pa.toFixed(1) + ' kW';
-  $('lbB').textContent = 'Maquina B \u00b7 ' + C.pb.toFixed(1) + ' kW';
+        // --- ACTUALIZACIÓN DE CONTROLES ---
+        function updateControls() {
+            state.mass = parseFloat(document.getElementById('input-mass').value);
+            state.force = parseFloat(document.getElementById('input-force').value);
+            state.distance = parseFloat(document.getElementById('input-dist').value);
+            state.targetTime = parseFloat(document.getElementById('input-time').value);
+            state.angle = parseFloat(document.getElementById('input-angle').value);
+            state.inclineAngle = parseFloat(document.getElementById('input-incline-angle').value);
+            state.frictionCoeff = parseFloat(document.getElementById('input-friction').value);
 
-  var f = k.tmax / 8;
-  $('cNote').innerHTML = Math.abs(f - 1) < 0.05
-    ? 'Animacion a tiempo real.'
-    : 'Animacion a ' + fmt(f, f >= 10 ? 0 : 1) + '&#215; velocidad.';
-  $('cPlay').textContent = C.running ? 'Pausar' : (C.t >= k.tmax - 1e-9 ? 'Repetir carrera' : 'Iniciar carrera');
+            document.getElementById('val-mass').innerText = state.mass;
+            document.getElementById('val-force').innerText = state.force;
+            document.getElementById('val-dist').innerText = state.distance;
+            document.getElementById('val-time').innerText = state.targetTime.toFixed(1);
+            document.getElementById('val-angle').innerText = state.angle;
+            document.getElementById('val-incline-angle').innerText = state.inclineAngle;
+            document.getElementById('val-friction').innerText = state.frictionCoeff.toFixed(2);
 
-  $('tPa').textContent = C.pa.toFixed(1);
-  $('tPb').textContent = C.pb.toFixed(1);
-  $('tHa').textContent = fmt(C.pa * 1000 / HP, 2);
-  $('tHb').textContent = fmt(C.pb * 1000 / HP, 2);
-  $('tWa').textContent = fmt(k.W / 1000, 1) + ' kJ';
-  $('tWb').textContent = fmt(k.W / 1000, 1) + ' kJ';
-  $('tTa').textContent = fmt(k.ta, 1) + ' s';
-  $('tTb').textContent = fmt(k.tb, 1) + ' s';
-  $('tVa').textContent = fmt(C.h / k.ta, 2) + ' m/s';
-  $('tVb').textContent = fmt(C.h / k.tb, 2) + ' m/s';
+            const phy = computePhysics();
+            document.getElementById('calc-weight').innerText = phy.weight.toFixed(1) + ' N';
+            document.getElementById('calc-friction').innerText = phy.fFrict.toFixed(1) + ' N';
+            document.getElementById('calc-fnet').innerText = phy.fNet.toFixed(1) + ' N';
+            document.getElementById('calc-acc').innerText = phy.accel.toFixed(2) + ' m/s²';
 
-  var hi = Math.max(C.pa, C.pb), lo = Math.min(C.pa, C.pb), ratio = hi / lo, ins;
-  if (Math.abs(C.pa - C.pb) < 1e-9){
-    ins = 'Ambas maquinas tienen la misma potencia y tardan lo mismo.';
-  } else {
-    var fast = C.pb > C.pa ? 'B' : 'A';
-    ins = 'La maquina ' + fast + ' tiene ' + fmt(ratio, 1) + ' veces mas potencia y hace el trabajo en ' + fmt(ratio, 1) + ' veces menos tiempo (' + fmt(Math.min(k.ta, k.tb), 1) + ' s vs ' + fmt(Math.max(k.ta, k.tb), 1) + ' s).';
-  }
-  $('cInsight').textContent = ins;
-}
+            if (state.mode === 'incline') {
+                document.getElementById('calc-px').innerText = phy.px.toFixed(1) + ' N';
+            }
 
-var last = 0;
-function frame(ts){
-  var dt = last ? Math.min(0.1, (ts - last) / 1000) : 0;
-  last = ts;
-  if (L.running){
-    L.t += dt * L.speed;
-    var c = labCalc();
-    if (L.t >= c.T){ L.t = c.T; L.running = false; }
-    renderLab();
-  }
-  if (C.running){
-    var k = cCalc();
-    C.t += dt * (k.tmax / 8);
-    if (C.t >= k.tmax){ C.t = k.tmax; C.running = false; }
-    renderCmp();
-  }
-  requestAnimationFrame(frame);
-}
+            document.getElementById('res-feff').innerText = phy.fEff.toFixed(1) + ' N';
 
-if ('ResizeObserver' in window){
-  new ResizeObserver(function(){ if (!$('laboratorio').hidden) drawGraph(labCalc()); }).observe($('gSvg'));
-}
-window.addEventListener('hashchange', function(){ show(location.hash.slice(1)); });
+            updateMathBreakdown(phy);
 
-renderLab();
-renderCmp();
-show(location.hash.slice(1));
-requestAnimationFrame(frame);
-})();
-</script>
+            if (!state.isPlaying) {
+                drawCanvas();
+            }
+        }
+
+        function updateMathBreakdown(phy) {
+            const container = document.getElementById('math-step-by-step');
+
+            if (state.mode === 'horizontal') {
+                container.innerHTML = `
+                    <p>• <strong>Modo:</strong> Plano Horizontal con Ángulo θ = ${state.angle}°</p>
+                    <p>• <strong>Fuerza Horizontal ($F_x$):</strong> F · cos(θ) = ${state.force} N · cos(${state.angle}°) = ${phy.fEff.toFixed(1)} N</p>
+                    <p>• <strong>Fricción ($f_k$):</strong> μ · N = ${state.frictionCoeff.toFixed(2)} · ${phy.fNormal.toFixed(1)} N = ${phy.fFrict.toFixed(1)} N</p>
+                    <p>• <strong>Fuerza Neta ($F_{net}$):</strong> ${phy.fNet.toFixed(1)} N &nbsp;➔&nbsp; <strong>Aceleración ($a$):</strong> ${phy.accel.toFixed(2)} m/s²</p>
+                    <p class="border-t pt-1 mt-1">• <strong>Trabajo ($W$):</strong> W = F_x · d = ${phy.fEff.toFixed(1)} N · ${state.distance} m = ${(phy.workTotal).toFixed(1)} J = ${(phy.workTotal / 1000).toFixed(3)} kJ</p>
+                    <p>• <strong>Potencia Media ($P$):</strong> P = W / t = ${(phy.workTotal).toFixed(1)} J / ${state.targetTime.toFixed(1)} s = <strong>${phy.avgPower.toFixed(1)} W</strong> = ${(phy.avgPower / 1000).toFixed(3)} kW</p>
+                `;
+            } else if (state.mode === 'incline') {
+                container.innerHTML = `
+                    <p>• <strong>Modo:</strong> Plano Inclinado α = ${state.inclineAngle}°</p>
+                    <p>• <strong>Componentes Peso:</strong> P_x = m·g·sin(${state.inclineAngle}°) = ${phy.px.toFixed(1)} N &nbsp;|&nbsp; P_y = m·g·cos(${state.inclineAngle}°) = ${phy.py.toFixed(1)} N</p>
+                    <p>• <strong>Normal ($N$):</strong> ${phy.fNormal.toFixed(1)} N &nbsp;|&nbsp; <strong>Fricción ($f_k$):</strong> ${phy.fFrict.toFixed(1)} N</p>
+                    <p>• <strong>Fuerza Neta ($F_{net}$):</strong> F - P_x - f_k = ${state.force} - ${phy.px.toFixed(1)} - ${phy.fFrict.toFixed(1)} = ${phy.fNet.toFixed(1)} N</p>
+                    <p>• <strong>Aceleración ($a$):</strong> ${phy.accel.toFixed(2)} m/s²</p>
+                    <p class="border-t pt-1 mt-1">• <strong>Trabajo ($W$):</strong> W = F · d = ${state.force} N · ${state.distance} m = ${(phy.workTotal).toFixed(1)} J</p>
+                    <p>• <strong>Potencia Media ($P$):</strong> P = W / t = ${(phy.workTotal).toFixed(1)} J / ${state.targetTime.toFixed(1)} s = <strong>${phy.avgPower.toFixed(1)} W</strong></p>
+                `;
+            } else {
+                container.innerHTML = `
+                    <p>• <strong>Modo:</strong> Elevación Vertical</p>
+                    <p>• <strong>Peso Objeto ($P_g$):</strong> m · g = ${state.mass} kg · 9.8 m/s² = ${phy.weight.toFixed(1)} N</p>
+                    <p>• <strong>Fuerza Aplicada ($F$):</strong> ${state.force} N &nbsp;➔&nbsp; <strong>Fuerza Neta ($F_{net}$):</strong> ${phy.fNet.toFixed(1)} N</p>
+                    <p class="border-t pt-1 mt-1">• <strong>Trabajo ($W$):</strong> W = F · h = ${state.force} N · ${state.distance} m = ${(phy.workTotal).toFixed(1)} J = ${(phy.workTotal / 1000).toFixed(3)} kJ</p>
+                    <p>• <strong>Potencia Media ($P$):</strong> P = W / t = ${(phy.workTotal).toFixed(1)} J / ${state.targetTime.toFixed(1)} s = <strong>${phy.avgPower.toFixed(1)} W</strong> = ${(phy.avgPower / 1000).toFixed(3)} kW</p>
+                `;
+            }
+
+            if (window.MathJax) {
+                    MathJax.typesetPromise([container]).catch((err) => console.log(err));
+                }
+        }
+
+        function toggleMathModal() {
+            document.getElementById('math-modal').classList.toggle('hidden');
+        }
+
+        function setSimSpeed(speed) {
+            state.simSpeed = speed;
+            ['05', '10', '20'].forEach(s => {
+                const btn = document.getElementById('spd-' + s);
+                if ((s === '05' && speed === 0.5) || (s === '10' && speed === 1.0) || (s === '20' && speed === 2.0)) {
+                    btn.className = "px-2.5 py-1 rounded text-xs font-bold bg-blue-600 text-white";
+                } else {
+                    btn.className = "px-2.5 py-1 rounded text-xs font-bold text-slate-600 hover:bg-white";
+                }
+            });
+        }
+
+        // --- REPRODUCCIÓN ---
+        function togglePlay() {
+            state.isPlaying = !state.isPlaying;
+            const btn = document.getElementById('btn-play');
+            const icon = document.getElementById('icon-play');
+            const txt = document.getElementById('txt-play');
+
+            if (state.isPlaying) {
+                btn.className = 'phet-btn phet-btn-orange text-white font-bold px-5 py-2 rounded-lg flex items-center gap-2 text-base';
+                icon.className = 'fa-solid fa-pause';
+                txt.innerText = 'Pausar';
+                if (state.posX >= state.distance) {
+                    resetSim();
+                    state.isPlaying = true;
+                }
+                lastFrameTime = performance.now();
+                requestAnimationFrame(simLoop);
+            } else {
+                btn.className = 'phet-btn phet-btn-green text-white font-bold px-5 py-2 rounded-lg flex items-center gap-2 text-base';
+                icon.className = 'fa-solid fa-play';
+                txt.innerText = 'Continuar';
+            }
+        }
+
+        function stepSim() {
+            if (state.isPlaying) togglePlay();
+            advancePhysics(0.05);
+            drawCanvas();
+        }
+
+        function resetSim() {
+            state.isPlaying = false;
+            state.posX = 0;
+            state.velX = 0;
+            state.elapsedTime = 0;
+            state.workDone = 0;
+            state.currentPower = 0;
+
+            state.chartDataHistory = { time: [], power: [], work: [], vel: [] };
+
+            const btn = document.getElementById('btn-play');
+            btn.className = 'phet-btn phet-btn-green text-white font-bold px-5 py-2 rounded-lg flex items-center gap-2 text-base';
+            document.getElementById('icon-play').className = 'fa-solid fa-play';
+            document.getElementById('txt-play').innerText = 'Iniciar';
+
+            updateHUD();
+            drawCanvas();
+            if (state.chart) updateChart();
+        }
+
+        let lastFrameTime = performance.now();
+
+        function advancePhysics(dt) {
+            if (state.posX >= state.distance) {
+                state.isPlaying = false;
+                playSound('success');
+                return;
+            }
+
+            const phy = computePhysics();
+
+            state.velX += phy.accel * dt;
+
+            if (state.velX < 0) {
+                state.velX = 0;
+            }
+
+            if (state.velX === 0 && phy.fNet <= 0) {
+                state.currentPower = 0;
+            } else {
+                const prevPos = state.posX;
+                state.posX += state.velX * dt;
+                if (state.posX > state.distance) state.posX = state.distance;
+
+                const dPos = state.posX - prevPos;
+                const dWork = phy.fEff * dPos;
+                state.workDone += dWork;
+
+                state.currentPower = phy.fEff * state.velX;
+            }
+
+            state.elapsedTime += dt;
+
+            if (Math.random() < 0.2 && state.velX > 0) playSound('motor');
+
+            state.chartDataHistory.time.push(state.elapsedTime.toFixed(2));
+            state.chartDataHistory.power.push(state.currentPower.toFixed(1));
+            state.chartDataHistory.work.push(state.workDone.toFixed(1));
+            state.chartDataHistory.vel.push(state.velX.toFixed(2));
+
+            if (state.chartDataHistory.time.length > 250) {
+                state.chartDataHistory.time.shift();
+                state.chartDataHistory.power.shift();
+                state.chartDataHistory.work.shift();
+                state.chartDataHistory.vel.shift();
+            }
+
+            updateHUD();
+        }
+
+        function simLoop(now) {
+            if (!state.isPlaying) return;
+
+            const dt = ((now - lastFrameTime) / 1000) * state.simSpeed;
+            lastFrameTime = now;
+
+            if (dt < 0.1) {
+                advancePhysics(dt);
+            }
+
+            drawCanvas();
+            if (state.chart && state.activeTab === 'graphs') {
+                updateChart();
+            }
+
+            if (state.isPlaying) {
+                requestAnimationFrame(simLoop);
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('hud-power').innerHTML = `${state.currentPower.toFixed(1)} <span class="text-xs font-semibold text-slate-300">W</span>`;
+            document.getElementById('hud-kw').innerText = (state.currentPower / 1000).toFixed(2) + ' kW';
+            document.getElementById('hud-hp').innerText = (state.currentPower / 745.7).toFixed(2) + ' hp';
+
+            const maxP = Math.max(500, state.force * 12);
+            document.getElementById('hud-power-bar').style.width = Math.min(100, (state.currentPower / maxP) * 100) + '%';
+
+            document.getElementById('hud-work').innerHTML = `${state.workDone.toFixed(1)} <span class="text-xs font-semibold text-slate-300">J</span>`;
+            document.getElementById('hud-kj').innerText = (state.workDone / 1000).toFixed(2) + ' kJ';
+            document.getElementById('lbl-time').innerText = state.elapsedTime.toFixed(1);
+
+            const phy = computePhysics();
+            document.getElementById('hud-work-bar').style.width = Math.min(100, (state.workDone / (phy.workTotal || 1)) * 100) + '%';
+
+            document.getElementById('res-vel').innerText = state.velX.toFixed(2) + ' m/s';
+            document.getElementById('res-pos').innerText = state.posX.toFixed(2) + ' m';
+        }
+
+        // --- CANVAS Y DIBUJO ---
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            drawCanvas();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function drawCanvas() {
+            if (!canvas.width) return;
+            const w = canvas.width;
+            const h = canvas.height;
+
+            ctx.clearRect(0, 0, w, h);
+
+            if (state.mode === 'horizontal') {
+                drawHorizontalScene(w, h);
+            } else if (state.mode === 'incline') {
+                drawInclineScene(w, h);
+            } else {
+                drawVerticalScene(w, h);
+            }
+        }
+
+        function drawHorizontalScene(w, h) {
+            const groundY = h * 0.72;
+            const startX = 80;
+            const maxPxWidth = w - 160;
+            const scalePxPerM = maxPxWidth / Math.max(state.distance, 15);
+
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillRect(0, groundY, w, h - groundY);
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            ctx.lineTo(w, groundY);
+            ctx.stroke();
+
+            if (document.getElementById('chk-grid').checked) {
+                ctx.fillStyle = '#475569';
+                ctx.font = '10px Roboto';
+                ctx.textAlign = 'center';
+                const distInt = Math.ceil(state.distance);
+                for (let i = 0; i <= distInt; i += (distInt > 25 ? 5 : 1)) {
+                    const rx = startX + i * scalePxPerM;
+                    ctx.beginPath();
+                    ctx.moveTo(rx, groundY);
+                    ctx.lineTo(rx, groundY + 8);
+                    ctx.stroke();
+                    ctx.fillText(i + ' m', rx, groundY + 20);
+                }
+            }
+
+            const targetPx = startX + state.distance * scalePxPerM;
+            ctx.strokeStyle = '#ef4444';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(targetPx, groundY - 120);
+            ctx.lineTo(targetPx, groundY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#ef4444';
+            ctx.fillText('META (' + state.distance + ' m)', targetPx, groundY - 125);
+
+            const boxWidth = 60;
+            const boxHeight = 50;
+            const currentBoxX = startX + state.posX * scalePxPerM;
+            const boxY = groundY - boxHeight;
+
+            ctx.fillStyle = 'rgba(0,0,0,0.12)';
+            ctx.beginPath();
+            ctx.ellipse(currentBoxX + boxWidth/2, groundY, boxWidth/2 + 4, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#d97706';
+            ctx.fillRect(currentBoxX, boxY, boxWidth, boxHeight);
+            ctx.strokeStyle = '#78350f';
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(currentBoxX, boxY, boxWidth, boxHeight);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px Roboto';
+            ctx.textAlign = 'center';
+            ctx.fillText(state.mass + ' kg', currentBoxX + boxWidth / 2, boxY + boxHeight / 2 + 4);
+
+            drawPerson(currentBoxX - 35, groundY, state.force > 0 && state.isPlaying);
+
+            const phy = computePhysics();
+
+            if (document.getElementById('chk-v-force').checked && state.force > 0) {
+                const rad = state.angle * Math.PI / 180;
+                const forceLength = Math.min(120, state.force * 0.22);
+                const fx = currentBoxX + boxWidth / 2;
+                const fy = boxY + boxHeight / 2;
+                drawArrow(fx, fy, fx + forceLength * Math.cos(rad), fy - forceLength * Math.sin(rad), '#2563eb', `F = ${state.force} N`);
+            }
+
+            if (document.getElementById('chk-v-disp').checked) {
+                drawArrow(startX, groundY + 35, currentBoxX + boxWidth/2, groundY + 35, '#16a34a', `d = ${state.posX.toFixed(1)} m`);
+            }
+
+            if (document.getElementById('chk-v-vel').checked && state.velX > 0) {
+                const velLen = Math.min(80, state.velX * 14);
+                drawArrow(currentBoxX + boxWidth / 2, boxY - 15, currentBoxX + boxWidth / 2 + velLen, boxY - 15, '#f97316', `v = ${state.velX.toFixed(1)} m/s`);
+            }
+
+            if (document.getElementById('chk-fbd').checked) {
+                drawFBD(currentBoxX + boxWidth/2, boxY + boxHeight/2, phy);
+            }
+        }
+
+        function drawInclineScene(w, h) {
+            const alphaRad = state.inclineAngle * Math.PI / 180;
+            const startX = 80;
+            const startY = h * 0.78;
+            const maxPxLen = w - 220;
+            const rampLenPx = maxPxLen;
+            const endX = startX + rampLenPx * Math.cos(alphaRad);
+            const endY = startY - rampLenPx * Math.sin(alphaRad);
+
+            // Rampa
+            ctx.fillStyle = '#cbd5e1';
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.lineTo(endX, startY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Arco Ángulo Rampa α
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(startX, startY, 40, 0, -alphaRad, true);
+            ctx.stroke();
+            ctx.fillStyle = '#0284c7';
+            ctx.font = 'bold 12px Roboto';
+            ctx.fillText(`α = ${state.inclineAngle}°`, startX + 48, startY - 10);
+
+            // Regla sobre la rampa
+            const scalePxPerM = rampLenPx / Math.max(state.distance, 15);
+
+            if (document.getElementById('chk-grid').checked) {
+                ctx.fillStyle = '#334155';
+                ctx.font = '10px Roboto';
+                ctx.textAlign = 'center';
+                const distInt = Math.ceil(state.distance);
+                for (let i = 0; i <= distInt; i += (distInt > 25 ? 5 : 1)) {
+                    const rx = startX + i * scalePxPerM * Math.cos(alphaRad);
+                    const ry = startY - i * scalePxPerM * Math.sin(alphaRad);
+                    ctx.beginPath();
+                    ctx.moveTo(rx, ry);
+                    ctx.lineTo(rx - 8 * Math.sin(alphaRad), ry - 8 * Math.cos(alphaRad));
+                    ctx.stroke();
+                }
+            }
+
+            // Meta
+            const targetDistPx = state.distance * scalePxPerM;
+            const targetX = startX + targetDistPx * Math.cos(alphaRad);
+            const targetY = startY - targetDistPx * Math.sin(alphaRad);
+            ctx.strokeStyle = '#ef4444';
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(targetX, targetY);
+            ctx.lineTo(targetX - 40 * Math.sin(alphaRad), targetY - 40 * Math.cos(alphaRad));
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Bloque sobre rampa
+            const currentDistPx = state.posX * scalePxPerM;
+            const objCenterX = startX + currentDistPx * Math.cos(alphaRad);
+            const objCenterY = startY - currentDistPx * Math.sin(alphaRad);
+
+            const boxW = 50;
+            const boxH = 40;
+
+            ctx.save();
+            ctx.translate(objCenterX, objCenterY);
+            ctx.rotate(-alphaRad);
+
+            // Bloque
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(-boxW/2, -boxH, boxW, boxH);
+            ctx.strokeStyle = '#0369a1';
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(-boxW/2, -boxH, boxW, boxH);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 11px Roboto';
+            ctx.textAlign = 'center';
+            ctx.fillText(state.mass + ' kg', 0, -boxH/2 + 4);
+
+            ctx.restore();
+
+            const phy = computePhysics();
+
+            if (document.getElementById('chk-v-force').checked && state.force > 0) {
+                const fLen = Math.min(100, state.force * 0.18);
+                const fx = objCenterX + fLen * Math.cos(alphaRad);
+                const fy = objCenterY - fLen * Math.sin(alphaRad);
+                drawArrow(objCenterX, objCenterY - 20 * Math.cos(alphaRad), fx, fy - 20 * Math.cos(alphaRad), '#2563eb', `F = ${state.force} N`);
+            }
+
+            if (document.getElementById('chk-v-disp').checked) {
+                drawArrow(startX, startY + 20, objCenterX, objCenterY + 20, '#16a34a', `d = ${state.posX.toFixed(1)} m`);
+            }
+
+            if (document.getElementById('chk-v-vel').checked && state.velX > 0) {
+                const vLen = Math.min(70, state.velX * 14);
+                const vx = objCenterX + vLen * Math.cos(alphaRad);
+                const vy = objCenterY - vLen * Math.sin(alphaRad);
+                drawArrow(objCenterX, objCenterY - 45 * Math.cos(alphaRad), vx, vy - 45 * Math.cos(alphaRad), '#f97316', `v = ${state.velX.toFixed(1)} m/s`);
+            }
+
+            if (document.getElementById('chk-fbd').checked) {
+                drawFBD(objCenterX, objCenterY - 20, phy);
+            }
+        }
+
+        function drawVerticalScene(w, h) {
+            const startY = h * 0.78;
+            const craneX = w * 0.5;
+            const topY = 60;
+            const maxPxHeight = startY - topY - 40;
+            const scalePxPerM = maxPxHeight / Math.max(state.distance, 15);
+
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(craneX - 90, startY + 20);
+            ctx.lineTo(craneX - 90, topY);
+            ctx.lineTo(craneX, topY);
+            ctx.stroke();
+
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(craneX, topY, 16, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillRect(craneX - 150, startY + 20, 300, 15);
+
+            if (document.getElementById('chk-grid').checked) {
+                ctx.fillStyle = '#475569';
+                ctx.font = '10px Roboto';
+                ctx.textAlign = 'right';
+                const distInt = Math.ceil(state.distance);
+                for (let i = 0; i <= distInt; i += (distInt > 25 ? 5 : 1)) {
+                    const ry = startY - i * scalePxPerM;
+                    ctx.beginPath();
+                    ctx.moveTo(craneX - 120, ry);
+                    ctx.lineTo(craneX - 110, ry);
+                    ctx.stroke();
+                    ctx.fillText(i + ' m', craneX - 125, ry + 3);
+                }
+            }
+
+            const currentObjY = startY - state.posX * scalePxPerM;
+            const boxW = 50;
+            const boxH = 50;
+
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(craneX, topY);
+            ctx.lineTo(craneX, currentObjY - boxH/2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(craneX - boxW/2, currentObjY - boxH/2, boxW, boxH);
+            ctx.strokeStyle = '#0369a1';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(craneX - boxW/2, currentObjY - boxH/2, boxW, boxH);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px Roboto';
+            ctx.textAlign = 'center';
+            ctx.fillText(state.mass + ' kg', craneX, currentObjY + 4);
+
+            const phy = computePhysics();
+
+            if (document.getElementById('chk-v-force').checked && state.force > 0) {
+                const fLen = Math.min(100, state.force * 0.14);
+                drawArrow(craneX + boxW/2 + 10, currentObjY, craneX + boxW/2 + 10, currentObjY - fLen, '#2563eb', `F = ${state.force} N`);
+            }
+
+            if (document.getElementById('chk-v-disp').checked) {
+                drawArrow(craneX - boxW/2 - 25, startY, craneX - boxW/2 - 25, currentObjY, '#16a34a', `h = ${state.posX.toFixed(1)} m`);
+            }
+
+            if (document.getElementById('chk-v-vel').checked && state.velX > 0) {
+                const vLen = Math.min(60, state.velX * 14);
+                drawArrow(craneX, currentObjY - boxH/2 - 5, craneX, currentObjY - boxH/2 - 5 - vLen, '#f97316', `v = ${state.velX.toFixed(1)} m/s`);
+            }
+
+            if (document.getElementById('chk-fbd').checked) {
+                drawFBD(craneX, currentObjY, phy);
+            }
+        }
+
+        function drawPerson(x, y, isPushing) {
+            ctx.strokeStyle = '#1e293b';
+            ctx.fillStyle = '#f87171';
+            ctx.lineWidth = 3.5;
+
+            ctx.beginPath();
+            ctx.arc(x, y - 55, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(x, y - 45);
+            ctx.lineTo(x + (isPushing ? 8 : 0), y - 22);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(x + (isPushing ? 8 : 0), y - 22);
+            ctx.lineTo(x - 8, y);
+            ctx.moveTo(x + (isPushing ? 8 : 0), y - 22);
+            ctx.lineTo(x + 12, y);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(x + 2, y - 40);
+            if (isPushing) {
+                ctx.lineTo(x + 20, y - 35);
+                ctx.lineTo(x + 35, y - 30);
+            } else {
+                ctx.lineTo(x + 15, y - 25);
+            }
+            ctx.stroke();
+        }
+
+        function drawArrow(fromx, fromy, tox, toy, color, label) {
+            const headlen = 10;
+            const dx = tox - fromx;
+            const dy = toy - fromy;
+            const angle = Math.atan2(dy, dx);
+
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 3.5;
+
+            ctx.beginPath();
+            ctx.moveTo(fromx, fromy);
+            ctx.lineTo(tox, toy);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(tox, toy);
+            ctx.lineTo(tox - headlen * Math.cos(angle - Math.PI / 6), toy - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(tox - headlen * Math.cos(angle + Math.PI / 6), toy - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.fill();
+
+            if (label) {
+                ctx.font = 'bold 11px Roboto';
+                ctx.fillText(label, tox + (dx >= 0 ? 8 : -38), toy + (dy >= 0 ? 15 : -8));
+            }
+        }
+
+        function drawFBD(cx, cy, phy) {
+            ctx.save();
+            ctx.translate(cx, cy);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.strokeStyle = '#8b5cf6';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, 20, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            if (state.mode === 'horizontal') {
+                drawArrow(0, 0, 0, 45, '#dc2626', 'W');
+                drawArrow(0, 0, 0, -45, '#16a34a', 'N');
+                if (phy.fFrict > 0) drawArrow(0, 0, -35, 0, '#d97706', 'fk');
+                drawArrow(0, 0, 45, 0, '#2563eb', 'F');
+            } else if (state.mode === 'incline') {
+                const aRad = state.inclineAngle * Math.PI / 180;
+                // Rotar DCL alineado a la rampa
+                drawArrow(0, 0, 0, 45, '#dc2626', 'P');
+                drawArrow(0, 0, -35 * Math.sin(aRad), 35 * Math.cos(aRad), '#a855f7', 'Px');
+                drawArrow(0, 0, -45 * Math.sin(aRad), -45 * Math.cos(aRad), '#16a34a', 'N');
+                drawArrow(0, 0, 45 * Math.cos(aRad), -45 * Math.sin(aRad), '#2563eb', 'F');
+            } else {
+                drawArrow(0, 0, 0, 45, '#dc2626', 'W');
+                drawArrow(0, 0, 0, -50, '#2563eb', 'F');
+            }
+
+            ctx.restore();
+        }
+
+        // --- GRÁFICAS CHART.JS ---
+        function initChart() {
+            const ctxChart = document.getElementById('realtimeChart').getContext('2d');
+            state.chart = new Chart(ctxChart, {
+                type: 'line',
+                data: {
+                    labels: state.chartDataHistory.time,
+                    datasets: [{
+                        label: 'Potencia Mecánica (W)',
+                        data: state.chartDataHistory.power,
+                        borderColor: '#0284c7',
+                        backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                        fill: true,
+                        tension: 0.2,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        x: { title: { display: true, text: 'Tiempo (s)' } },
+                        y: { title: { display: true, text: 'Potencia (W)' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function setGraphVariable(v) {
+            state.chartVar = v;
+            document.getElementById('btn-g-power').className = v === 'power' ? "px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-bold shadow-sm" : "px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-xs font-bold hover:bg-gray-300";
+            document.getElementById('btn-g-work').className = v === 'work' ? "px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-bold shadow-sm" : "px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-xs font-bold hover:bg-gray-300";
+            document.getElementById('btn-g-vel').className = v === 'vel' ? "px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-bold shadow-sm" : "px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-xs font-bold hover:bg-gray-300";
+
+            if (state.chart) {
+                if (v === 'power') {
+                    state.chart.data.datasets[0].label = 'Potencia Mecánica (W)';
+                    state.chart.data.datasets[0].borderColor = '#0284c7';
+                    state.chart.options.scales.y.title.text = 'Potencia (W)';
+                } else if (v === 'work') {
+                    state.chart.data.datasets[0].label = 'Trabajo Realizado (J)';
+                    state.chart.data.datasets[0].borderColor = '#0891b2';
+                    state.chart.options.scales.y.title.text = 'Trabajo (J)';
+                } else {
+                    state.chart.data.datasets[0].label = 'Velocidad (m/s)';
+                    state.chart.data.datasets[0].borderColor = '#f97316';
+                    state.chart.options.scales.y.title.text = 'Velocidad (m/s)';
+                }
+                updateChart();
+            }
+        }
+
+        function updateChart() {
+            if (!state.chart) return;
+            state.chart.data.labels = state.chartDataHistory.time;
+            if (state.chartVar === 'power') state.chart.data.datasets[0].data = state.chartDataHistory.power;
+            else if (state.chartVar === 'work') state.chart.data.datasets[0].data = state.chartDataHistory.work;
+            else state.chart.data.datasets[0].data = state.chartDataHistory.vel;
+            state.chart.update();
+        }
+
+        // --- MODO DESAFÍO / QUIZ ---
+        function generateQuizChallenge() {
+            const types = ['power', 'work', 'time'];
+            const chosenType = types[Math.floor(Math.random() * types.length)];
+
+            const f = Math.floor(Math.random() * 40 + 10) * 10; // N
+            const d = Math.floor(Math.random() * 15 + 5);       // m
+            const t = Math.floor(Math.random() * 8 + 2);        // s
+
+            const work = f * d;     // J
+            const power = work / t; // W
+
+            let challenge = { type: chosenType, f, d, t, work, power };
+
+            const titleEl = document.getElementById('quiz-title');
+            const descEl = document.getElementById('quiz-desc');
+            const paramsEl = document.getElementById('quiz-params');
+            const unitEl = document.getElementById('quiz-unit');
+            const feedbackEl = document.getElementById('quiz-feedback');
+
+            feedbackEl.className = 'hidden';
+            document.getElementById('quiz-answer').value = '';
+
+            if (chosenType === 'power') {
+                titleEl.innerText = 'Desafío: Cálculo de Potencia Mecánica';
+                descEl.innerText = 'Calcula la potencia desarrollada al aplicar la fuerza sobre la distancia dada:';
+                unitEl.innerText = 'W';
+                paramsEl.innerHTML = `
+                    <div><span class="text-gray-400 block">Fuerza (F)</span><strong>${f} N</strong></div>
+                    <div><span class="text-gray-400 block">Distancia (d)</span><strong>${d} m</strong></div>
+                    <div><span class="text-gray-400 block">Tiempo (t)</span><strong>${t} s</strong></div>
+                    <div><span class="text-gray-400 block">Ángulo (θ)</span><strong>0°</strong></div>
+                `;
+                challenge.expected = power;
+            } else if (chosenType === 'work') {
+                titleEl.innerText = 'Desafío: Cálculo de Trabajo Mecánico';
+                descEl.innerText = '¿Qué cantidad de trabajo realiza la fuerza constante sobre el cuerpo?';
+                unitEl.innerText = 'J';
+                paramsEl.innerHTML = `
+                    <div><span class="text-gray-400 block">Fuerza (F)</span><strong>${f} N</strong></div>
+                    <div><span class="text-gray-400 block">Distancia (d)</span><strong>${d} m</strong></div>
+                    <div><span class="text-gray-400 block">Tiempo (t)</span><strong>${t} s</strong></div>
+                    <div><span class="text-gray-400 block">Ángulo (θ)</span><strong>0°</strong></div>
+                `;
+                challenge.expected = work;
+            } else {
+                titleEl.innerText = 'Desafío: Determinar el Tiempo Requerido';
+                descEl.innerText = 'Una máquina con potencia fija realiza un trabajo. ¿Cuánto tiempo le toma?';
+                unitEl.innerText = 's';
+                paramsEl.innerHTML = `
+                    <div><span class="text-gray-400 block">Potencia (P)</span><strong>${power.toFixed(1)} W</strong></div>
+                    <div><span class="text-gray-400 block">Fuerza (F)</span><strong>${f} N</strong></div>
+                    <div><span class="text-gray-400 block">Distancia (d)</span><strong>${d} m</strong></div>
+                    <div><span class="text-gray-400 block">Ángulo (θ)</span><strong>0°</strong></div>
+                `;
+                challenge.expected = t;
+            }
+
+            state.currentChallenge = challenge;
+        }
+
+        function checkQuizAnswer() {
+            if (!state.currentChallenge) return;
+
+            const userAns = parseFloat(document.getElementById('quiz-answer').value);
+            const feedbackEl = document.getElementById('quiz-feedback');
+            const expected = state.currentChallenge.expected;
+
+            if (isNaN(userAns)) {
+                feedbackEl.className = "p-4 rounded-xl text-sm font-bold bg-amber-100 text-amber-800 border border-amber-300 block";
+                feedbackEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-2"></i> Ingresa un valor numérico.`;
+                return;
+            }
+
+            const margin = Math.abs(expected * 0.03);
+            if (Math.abs(userAns - expected) <= margin) {
+                state.quizScore += 10;
+                document.getElementById('quiz-score').innerText = state.quizScore;
+                playSound('success');
+                feedbackEl.className = "p-4 rounded-xl text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 block";
+                feedbackEl.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 text-lg mr-2"></i> ¡Correcto! Resultado: ${expected.toFixed(1)} ${document.getElementById('quiz-unit').innerText}`;
+            } else {
+                feedbackEl.className = "p-4 rounded-xl text-sm font-bold bg-rose-100 text-rose-800 border border-rose-300 block";
+                feedbackEl.innerHTML = `<i class="fa-solid fa-circle-xmark text-rose-600 text-lg mr-2"></i> Incorrecto. El valor exacto es ${expected.toFixed(1)} ${document.getElementById('quiz-unit').innerText}.`;
+            }
+        }
+
+        // --- NAVEGACIÓN ---
+        function switchTab(tabId) {
+            state.activeTab = tabId;
+
+            const simContainer = document.getElementById('main-sim-container');
+            const graphsContainer = document.getElementById('tab-graphs-container');
+            const quizContainer = document.getElementById('tab-quiz-container');
+            const controlsPanel = document.getElementById('panel-controls');
+
+            ['horizontal', 'incline', 'vertical', 'graphs', 'quiz'].forEach(t => {
+                const btn = document.getElementById('tab-' + t + '-btn');
+                if (t === tabId) {
+                    btn.className = "px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold transition bg-amber-400 text-blue-950 shadow";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold transition text-white hover:bg-white/10";
+                }
+            });
+
+            if (tabId === 'horizontal' || tabId === 'incline' || tabId === 'vertical') {
+                state.mode = tabId;
+                simContainer.classList.remove('hidden');
+                graphsContainer.classList.add('hidden');
+                quizContainer.classList.add('hidden');
+                controlsPanel.style.display = 'flex';
+
+                const wrapAngle = document.getElementById('wrapper-angle');
+                const wrapInclineAngle = document.getElementById('wrapper-incline-angle');
+                const wrapFric = document.getElementById('wrapper-friction');
+                const rowPx = document.getElementById('row-px');
+                const lblDist = document.getElementById('lbl-dist-title');
+
+                if (tabId === 'horizontal') {
+                    wrapAngle.classList.remove('hidden');
+                    wrapInclineAngle.classList.add('hidden');
+                    wrapFric.classList.remove('hidden');
+                    rowPx.classList.add('hidden');
+                    lblDist.innerText = 'Desplazamiento (d):';
+                } else if (tabId === 'incline') {
+                    wrapAngle.classList.add('hidden');
+                    wrapInclineAngle.classList.remove('hidden');
+                    wrapFric.classList.remove('hidden');
+                    rowPx.classList.remove('hidden');
+                    lblDist.innerText = 'Longitud Rampa (d):';
+                } else {
+                    wrapAngle.classList.add('hidden');
+                    wrapInclineAngle.classList.add('hidden');
+                    wrapFric.classList.add('hidden');
+                    rowPx.classList.add('hidden');
+                    lblDist.innerText = 'Altura Elevação (h):';
+                    state.angle = 0;
+                }
+                resetSim();
+            } else if (tabId === 'graphs') {
+                simContainer.classList.add('hidden');
+                graphsContainer.classList.remove('hidden');
+                quizContainer.classList.add('hidden');
+                controlsPanel.style.display = 'none';
+
+                if (!state.chart) initChart();
+                updateChart();
+            } else if (tabId === 'quiz') {
+                simContainer.classList.add('hidden');
+                graphsContainer.classList.add('hidden');
+                quizContainer.classList.remove('hidden');
+                controlsPanel.style.display = 'none';
+
+                if (!state.currentChallenge) generateQuizChallenge();
+            }
+        }
+
+        window.onload = function() {
+            updateControls();
+            resizeCanvas();
+        };
+    </script>
 </body>
 </html>
