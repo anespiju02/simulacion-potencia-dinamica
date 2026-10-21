@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Laboratorio de Potencia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#EDF1F3;--surface:#FFFFFF;--surface-2:#E1E8EC;--ink:#10222C;--muted:#52646F;--line:#C3CFD6;--grid:#DCE4E9;
+  --accent:#0A6C8B;--accent-ink:#FFFFFF;--power:#C24A06;--on-power:#FFFFFF;--warn:#9A6A00;--good:#1C7A3C;--bad:#B3261E;
+  --sky:#CFE5F1;--ground:#B8D2AA;--ramp:#B08A5E;--hud:rgba(255,255,255,.94);
+  --f-display:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1920;--surface:#14252E;--surface-2:#1D3440;--ink:#E5EEF2;--muted:#9DB2BD;--line:#2D4653;--grid:#213B47;
+    --accent:#4DC0E0;--accent-ink:#06222B;--power:#FF9150;--on-power:#2A1204;--warn:#E0B04A;--good:#5CC785;--bad:#FF8F85;
+    --sky:#10303D;--ground:#1D3A2A;--ramp:#7E6244;--hud:rgba(20,37,46,.94);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1920;--surface:#14252E;--surface-2:#1D3440;--ink:#E5EEF2;--muted:#9DB2BD;--line:#2D4653;--grid:#213B47;
+  --accent:#4DC0E0;--accent-ink:#06222B;--power:#FF9150;--on-power:#2A1204;--warn:#E0B04A;--good:#5CC785;--bad:#FF8F85;
+  --sky:#10303D;--ground:#1D3A2A;--ramp:#7E6244;--hud:rgba(20,37,46,.94);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:var(--f-body);font-size:14px;line-height:1.45;
+  padding:12px max(16px, env(safe-area-inset-right)) 32px max(16px, env(safe-area-inset-left));
+}
+.wrap{width:100%;max-width:1600px;margin:0 auto}
+h1,h2{margin:0}
+h1{
+  font-family:var(--f-display);font-weight:700;text-transform:uppercase;letter-spacing:.02em;
+  font-size:clamp(1.6rem, 3.5vw, 2.2rem);line-height:1;
+}
+h2{font-family:var(--f-display);font-weight:600;font-size:1.05rem;letter-spacing:.02em;line-height:1.15;margin:0}
+.top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 20px;margin-bottom:8px}
+.formulas{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px}
+.fx{font-family:var(--f-display);font-weight:600;font-size:1.35rem;letter-spacing:.02em;line-height:1.1}
+.fx b{color:var(--power);font-weight:700}
+.units{font-family:var(--f-mono);font-size:.76rem;color:var(--muted)}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:6px 0 10px;overflow-x:auto}
+.tab{
+  font:600 .9rem var(--f-body);padding:6px 12px;background:none;border:0;border-bottom:3px solid transparent;
+  color:var(--muted);cursor:pointer;margin-bottom:-1px;white-space:nowrap;
+}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--power)}
+.tab:hover{color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.sim{
+  display:grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap:14px;
+  align-items:start;
+}
+.main{min-width:0;display:flex;flex-direction:column;gap:10px}
+.side{display:grid;gap:10px;min-width:0}
+
+.stagebox{position:relative;width:100%}
+.stage{
+  position:relative;
+  width:100%;
+  aspect-ratio: 16 / 9.5;
+  min-height: 420px;
+  max-height: 680px;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--sky);
+}
+.stage > svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.hud{
+  position:absolute;background:var(--hud);border:1px solid var(--line);border-radius:6px;padding:6px 10px;
+  backdrop-filter: blur(4px);
+}
+.hud-tl{top:10px;left:10px}
+.hud-tr{top:10px;right:10px;text-align:right}
+.hud dl{display:grid;grid-template-columns:auto auto;gap:2px 10px;margin:0;font-size:.82rem}
+.hud dt{color:var(--muted)}
+.hud dd{margin:0;font-family:var(--f-mono);font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.hud .lab-t{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.big{font-family:var(--f-display);font-weight:700;font-size:clamp(2.2rem, 4vw, 3.5rem);line-height:1;color:var(--power);font-variant-numeric:tabular-nums}
+.big .unit{font-size:1.2rem;margin-left:4px;color:var(--ink)}
+.conv{margin-top:2px;font-size:.76rem;color:var(--muted)}
+.conv b{font-family:var(--f-mono);color:var(--ink);font-weight:600}
+
+.ov{
+  background:var(--hud);
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:10px 12px;
+  min-width:0;
+}
+.ov-split{width:100%;}
+.ovhead{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.ovhead h2{font-size:.95rem;margin-right:auto}
+.gbody{flex:1;min-height:0;margin-top:4px;position:relative;height:190px}
+#gSvg{display:block;position:absolute;inset:0;width:100%;height:100%}
+.mini{
+  font:600 .72rem var(--f-body);padding:2px 6px;border-radius:4px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink);cursor:pointer;
+}
+.mini:hover{border-color:var(--muted)}
+.minchk{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;color:var(--muted)}
+
+.playbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 12px;padding:4px 0}
+.btn{
+  font:600 .88rem var(--f-body);padding:8px 14px;border-radius:6px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink);cursor:pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.btn:hover{border-color:var(--muted);background:var(--surface-2)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);min-width:8rem}
+.btn.primary:hover{opacity:.92}
+.inline{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;color:var(--muted)}
+select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:5px 8px}
+.pnote{width:100%;text-align:center;color:var(--muted);font-size:.82rem;margin:0}
+.insight{width:100%;text-align:center;font-weight:500;margin:0;font-size:.9rem}
+
+.box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0}
+.box .ttl{font-family:var(--f-display);font-weight:600;font-size:1rem;letter-spacing:.02em;margin-bottom:6px}
+.ctl{display:grid;grid-template-columns:1fr auto;gap:0 8px;margin-bottom:8px}
+.ctl:last-child{margin-bottom:0}
+.ctl label{font-size:.84rem;font-weight:500}
+.ctl output{font-family:var(--f-mono);font-size:.84rem}
+.ctl input{grid-column:1 / -1;width:100%;accent-color:var(--accent);margin:2px 0 0;cursor:pointer}
+.restore{width:100%;font-size:.92rem}
+.side .note{color:var(--muted);font-size:.76rem;margin:6px 0 0}
+details.box > summary{
+  cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:1rem;letter-spacing:.02em;list-style-position:inside;
+}
+details.box[open] > summary{margin-bottom:8px}
+.steps{margin:0;padding:0;list-style:none;display:grid;gap:8px;counter-reset:s}
+.steps li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:start}
+.steps li::before{
+  counter-increment:s;content:counter(s);width:22px;height:22px;border-radius:50%;background:var(--surface-2);
+  font:600 .72rem var(--f-mono);display:grid;place-items:center;margin-top:1px;
+}
+.step-name{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.step-math{font-family:var(--f-mono);font-size:.78rem;overflow-wrap:anywhere}
+.steps li.hl .step-math{color:var(--power);font-weight:600}
+
+.split{display:flex;height:14px;border-radius:4px;overflow:hidden;background:var(--surface-2);margin-top:6px}
+.split span{display:block;height:100%}
+#segU{background:var(--accent)}
+#segF{background:var(--warn)}
+.legend{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:2px;font-size:.78rem}
+.legend b{font-family:var(--f-mono);font-weight:600}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.sw.u{background:var(--accent)}.sw.f{background:var(--warn)}
+.effnote{margin:4px 0 0;font-size:.76rem;color:var(--muted)}
+
+svg text{font-family:var(--f-mono)}
+.sky{fill:var(--sky)}
+.ground{fill:var(--ground)}
+.ramp{fill:var(--ramp)}
+.surf{stroke:var(--ink);stroke-width:3;stroke-linecap:round}
+.ticks{fill:none;stroke:var(--ink);stroke-width:1.5}
+.arc{fill:none;stroke:var(--ink);stroke-width:1.5}
+.hline{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:5 4;opacity:.7}
+.rope{stroke:var(--power);stroke-width:3.5;stroke-linecap:round}
+.motor{fill:var(--power);stroke:var(--ink);stroke-width:1.5}
+.motorTxt{fill:var(--on-power);font-size:16px;font-weight:600;text-anchor:middle;dominant-baseline:central}
+.blk{fill:var(--accent);stroke:var(--ink);stroke-width:1.5}
+.blkTxt{fill:var(--accent-ink);font-size:15px;font-weight:600}
+.lbl{fill:var(--ink);font-size:18px;font-weight:500}
+.lblp{fill:var(--power);font-size:18px;font-weight:600;text-anchor:middle;paint-order:stroke;stroke:var(--sky);stroke-width:4px}
+.gg{stroke:var(--grid);stroke-width:1}
+.gax{stroke:var(--muted);stroke-width:1.5}
+.gt{fill:var(--muted);font-size:10px}
+.gtitle{fill:var(--ink);font-family:var(--f-body);font-size:10.5px;font-weight:500}
+.gpred{stroke:var(--accent);stroke-width:2;stroke-dasharray:6 5;opacity:.55}
+.gtrace{stroke:var(--accent);stroke-width:3.5;stroke-linecap:round}
+.gghost{stroke:var(--muted);stroke-width:2;stroke-dasharray:3 4}
+.gdot{fill:var(--power);stroke:var(--surface);stroke-width:2}
+.gp{fill:var(--power);font-size:11px;font-weight:600}
+.gm{fill:var(--muted);font-size:10px}
+.shaft{fill:var(--surface);fill-opacity:.35;stroke:var(--ink);stroke-width:2}
+.pulley{fill:var(--surface-2);stroke:var(--ink);stroke-width:2}
+.cable{stroke:var(--ink);stroke-width:2}
+.boxA{fill:var(--accent);stroke:var(--ink);stroke-width:1.5}
+.boxB{fill:var(--power);stroke:var(--ink);stroke-width:1.5}
+.boxTxtA{fill:var(--accent-ink);font-size:14px;font-weight:600;text-anchor:middle;dominant-baseline:central}
+.boxTxtB{fill:var(--on-power);font-size:14px;font-weight:600;text-anchor:middle;dominant-baseline:central}
+.dim{stroke:var(--ink);stroke-width:1.5}
+.tm{fill:var(--ink);font-size:22px;font-weight:600;text-anchor:middle}
+.tm.done{fill:var(--good)}
+.cap{fill:var(--ink);font-size:19px;text-anchor:middle}
+.capA{fill:var(--ink);font-size:20px;font-weight:600;text-anchor:middle}
+
+.tbl{width:100%;border-collapse:collapse;font-size:.82rem}
+.tbl th,.tbl td{padding:5px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.tbl thead th{font-family:var(--f-display);font-size:1rem;font-weight:600;letter-spacing:.02em}
+.tbl .ca{color:var(--accent)}.tbl .cb{color:var(--power)}
+.tbl td{font-family:var(--f-mono);font-size:.78rem;text-align:right}
+.tbl thead th:not(:first-child){text-align:right}
+.tbl tbody th{font-weight:500;color:var(--muted);font-size:.76rem}
+
+@media (max-width: 1024px){
+  .sim{grid-template-columns:1fr; gap:12px}
+  .stage{height:auto; aspect-ratio: 16 / 10; min-height: 340px}
+  .hud{padding:5px 8px}
+  .hud dl{font-size:.76rem}
+  .big{font-size:2.2rem}
+  .conv{display:block}
+}
+@media (max-width: 640px){
+  body{padding:8px 8px 24px 8px}
+  .top{flex-direction:column; align-items:flex-start; gap:4px}
+  .formulas{gap:6px 12px}
+  .fx{font-size:1.15rem}
+  .stage{aspect-ratio: 4 / 3; min-height: 280px}
+  .hud{top:6px; left:6px; right:6px; position:absolute}
+  .hud-tl{top:6px; left:6px}
+  .hud-tr{top:auto; bottom:6px; left:6px; right:6px; display:flex; justify-content:space-between; align-items:center}
+  .hud dl{grid-template-columns: repeat(4, auto); gap:0 8px}
+  .hud dt{display:none}
+  .hud dd{font-size:.72rem}
+  .hud .lab-t{display:none}
+  .big{font-size:1.6rem}
+  .big .unit{font-size:1rem}
+  .conv{display:none}
+  .playbar{gap:6px}
+  .btn{padding:7px 12px; font-size:.82rem; flex:1; min-width:0}
+  .btn.primary{min-width:0}
+  .inline{width:100%; justify-content:space-between}
+}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Laboratorio de Potencia Mecánica</h1>
+    <div class="formulas" aria-label="Fórmulas principales">
+      <span class="fx"><b>P</b> = W / t</span>
+      <span class="fx"><b>P</b> = F &middot; v</span>
+      <span class="units">1 kW = 1 000 W</span>
+      <span class="units">1 hp &approx; 745.7 W</span>
+      <span class="units">1 CV &approx; 735.5 W</span>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Simulaciones">
+    <button class="tab" role="tab" id="tab-laboratorio" aria-controls="laboratorio" aria-selected="true" data-view="laboratorio" type="button">Rampa con motor</button>
+    <button class="tab" role="tab" id="tab-comparador" aria-controls="comparador" aria-selected="false" tabindex="-1" data-view="comparador" type="button">Dos máquinas</button>
+  </div>
+
+  <!-- ============ RAMPA CON MOTOR ============ -->
+  <section id="laboratorio" role="tabpanel" aria-labelledby="tab-laboratorio">
+    <div class="sim">
+      <div class="main">
+        <div class="stagebox">
+          <div class="stage">
+            <svg id="rampSvg" viewBox="100 10 650 380" preserveAspectRatio="xMidYMax meet" role="img" aria-label="Un motor tira de un bloque por una rampa inclinada">
+              <rect class="sky" x="-3000" y="-3000" width="7000" height="3330"></rect>
+              <polygon id="rampPoly" class="ramp" points="0,0 0,0 0,0"></polygon>
+              <path id="ticks" class="ticks" d=""></path>
+              <line id="surf" class="surf" x1="0" y1="0" x2="0" y2="0"></line>
+              <path id="angArc" class="arc" d=""></path>
+              <text id="angTxt" class="lbl" x="0" y="0"></text>
+              <line id="hLine" class="hline" x1="0" y1="0" x2="0" y2="0"></line>
+              <text id="hTxt" class="lbl" x="0" y="0"></text>
+              <line id="rope" class="rope" x1="0" y1="0" x2="0" y2="0"></line>
+              <circle id="motor" class="motor" cx="0" cy="0" r="14"></circle>
+              <text id="motorTxt" class="motorTxt" x="0" y="0">M</text>
+              <g id="blk">
+                <rect class="blk" x="-32" y="-42" width="64" height="40" rx="3"></rect>
+                <text id="blkTxt" class="blkTxt" x="0" y="-16" text-anchor="middle"></text>
+              </g>
+              <text id="fTxt" class="lblp" x="0" y="0"></text>
+            </svg>
+            <div class="hud hud-tl">
+              <dl>
+                <dt>Tiempo</dt><dd><span id="hT">0.0</span> s</dd>
+                <dt>Velocidad</dt><dd><span id="hV">0.0</span> m/s</dd>
+                <dt>Trabajo</dt><dd><span id="hW">0</span> J</dd>
+                <dt>Recorrido</dt><dd>10 m</dd>
+              </dl>
+            </div>
+            <div class="hud hud-tr">
+              <div class="lab-t">Potencia del motor</div>
+              <div class="big"><span id="pBig">0</span><span class="unit">W</span></div>
+              <div class="conv"><b id="pKw">0</b> kW &middot; <b id="pHp">0</b> hp &middot; <span id="pBulbs"></span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ov ov-split">
+          <h2>¿A dónde va la potencia?</h2>
+          <div class="split" id="splitBar" role="img" aria-label="Reparto de la potencia entre útil y fricción"><span id="segU"></span><span id="segF"></span></div>
+          <ul class="legend">
+            <li><i class="sw u"></i>Útil, sube la carga: <b id="pU"></b></li>
+            <li><i class="sw f"></i>Fricción, se pierde: <b id="pF"></b></li>
+          </ul>
+          <p class="effnote" id="effNote"></p>
+        </div>
+
+        <div class="playbar">
+          <button class="btn primary" id="playBtn" type="button">Reproducir</button>
+          <button class="btn" id="resetBtn" type="button">Volver al inicio</button>
+          <label class="inline" for="speedSel">Velocidad:
+            <select id="speedSel">
+              <option value="0.5">&times;0.5 (lenta)</option>
+              <option value="1" selected>&times;1</option>
+              <option value="2">&times;2</option>
+              <option value="4">&times;4</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <aside class="side" aria-label="Controles">
+        <button class="btn restore" id="restoreBtn" type="button">Restablecer valores</button>
+        <div class="box">
+          <div class="ctl"><label for="sm">Masa, m</label><output id="om" for="sm"></output>
+            <input type="range" id="sm" min="5" max="60" step="1" value="40"></div>
+          <div class="ctl"><label for="sth">Ángulo de la rampa, &theta;</label><output id="oth" for="sth"></output>
+            <input type="range" id="sth" min="0" max="35" step="1" value="25"></div>
+          <div class="ctl"><label for="smu">Coeficiente de fricción, &mu;</label><output id="omu" for="smu"></output>
+            <input type="range" id="smu" min="0" max="0.4" step="0.01" value="0.2"></div>
+          <div class="ctl"><label for="sv">Velocidad de subida, v</label><output id="ov" for="sv"></output>
+            <input type="range" id="sv" min="0.5" max="4" step="0.1" value="2"></div>
+          <p class="note">g = 9.8 m/s². El bloque sube a velocidad constante.</p>
+        </div>
+        <div class="box graphbox" id="ovGraph">
+          <div class="ovhead">
+            <h2>Trabajo acumulado en el tiempo</h2>
+            <button class="mini" id="saveBtn" type="button">Guardar</button>
+            <button class="mini" id="clearBtn" type="button">Borrar</button>
+            <label class="minchk" for="autoscale"><input type="checkbox" id="autoscale"> Auto</label>
+            <button class="mini" id="minGraph" type="button" aria-expanded="true" aria-controls="gBody" title="Mostrar u ocultar el gráfico">&minus;</button>
+          </div>
+          <div class="gbody" id="gBody">
+            <svg id="gSvg" viewBox="0 0 264 190" role="img" aria-label="Gráfico del trabajo realizado contra el tiempo; la pendiente es la potencia"></svg>
+          </div>
+        </div>
+        <details class="box">
+          <summary>Cálculo paso a paso</summary>
+          <ol class="steps">
+            <li><div><div class="step-name">Fuerza necesaria</div><div class="step-math" id="s1"></div></div></li>
+            <li><div><div class="step-name">Trabajo del motor</div><div class="step-math" id="s2"></div></div></li>
+            <li><div><div class="step-name">Tiempo de subida</div><div class="step-math" id="s3"></div></div></li>
+            <li class="hl"><div><div class="step-name">Potencia = trabajo / tiempo</div><div class="step-math" id="s4"></div></div></li>
+            <li><div><div class="step-name">Comprobación con F &middot; v</div><div class="step-math" id="s5"></div></div></li>
+          </ol>
+        </details>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ DOS MÁQUINAS ============ -->
+  <section id="comparador" role="tabpanel" aria-labelledby="tab-comparador" hidden>
+    <div class="sim">
+      <div class="main">
+        <div class="stagebox">
+          <div class="stage">
+            <svg id="raceSvg" viewBox="80 0 800 540" preserveAspectRatio="xMidYMax meet" role="img" aria-label="Dos montacargas suben la misma carga a la misma altura con distinta potencia">
+              <rect class="sky" x="-3000" y="-3000" width="7000" height="3480"></rect>
+              <rect class="ground" x="-3000" y="480" width="7000" height="3000"></rect>
+              <line class="dim" x1="130" y1="480" x2="130" y2="150"></line>
+              <line class="dim" x1="120" y1="480" x2="140" y2="480"></line>
+              <line class="dim" x1="120" y1="150" x2="140" y2="150"></line>
+              <text id="cH" class="cap" transform="translate(106 315) rotate(-90)">h</text>
+              <rect class="shaft" x="254" y="70" width="92" height="410"></rect>
+              <rect class="shaft" x="614" y="70" width="92" height="410"></rect>
+              <circle class="pulley" cx="300" cy="60" r="14"></circle>
+              <circle class="pulley" cx="660" cy="60" r="14"></circle>
+              <line id="cabA" class="cable" x1="300" y1="74" x2="300" y2="104"></line>
+              <line id="cabB" class="cable" x1="660" y1="74" x2="660" y2="104"></line>
+              <rect id="boxA" class="boxA" x="268" y="434" width="64" height="46" rx="3"></rect>
+              <text id="boxTA" class="boxTxtA" x="300" y="457"></text>
+              <rect id="boxB" class="boxB" x="628" y="434" width="64" height="46" rx="3"></rect>
+              <text id="boxTB" class="boxTxtB" x="660" y="457"></text>
+              <text id="tmA" class="tm" x="300" y="38">t = 0.0 s</text>
+              <text id="tmB" class="tm" x="660" y="38">t = 0.0 s</text>
+              <text id="lbA" class="capA" x="300" y="518"></text>
+              <text id="lbB" class="capA" x="660" y="518"></text>
+            </svg>
+            <div class="hud hud-tl">
+              <dl>
+                <dt>Carga</dt><dd><span id="hcm">0</span> kg</dd>
+                <dt>Altura</dt><dd><span id="hch">0</span> m</dd>
+                <dt>Trabajo</dt><dd><span id="hcw">0</span> kJ</dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+        <div class="playbar">
+          <button class="btn primary" id="cPlay" type="button">Iniciar carrera</button>
+          <button class="btn" id="cReset" type="button">Volver al inicio</button>
+          <p class="pnote" id="cNote"></p>
+          <p class="insight" id="cInsight"></p>
+        </div>
+      </div>
+
+      <aside class="side" aria-label="Controles">
+        <button class="btn restore" id="cRestore" type="button">Restablecer valores</button>
+        <div class="box">
+          <div class="ctl"><label for="cm">Masa de la carga, m</label><output id="ocm" for="cm"></output>
+            <input type="range" id="cm" min="100" max="1000" step="50" value="500"></div>
+          <div class="ctl"><label for="ch">Altura que se sube, h</label><output id="och" for="ch"></output>
+            <input type="range" id="ch" min="5" max="30" step="1" value="15"></div>
+          <div class="ctl"><label for="cpa">Potencia de la máquina A</label><output id="ocpa" for="cpa"></output>
+            <input type="range" id="cpa" min="0.5" max="10" step="0.1" value="1.5"></div>
+          <div class="ctl"><label for="cpb">Potencia de la máquina B</label><output id="ocpb" for="cpb"></output>
+            <input type="range" id="cpb" min="0.5" max="10" step="0.1" value="4"></div>
+          <p class="note">Toda la potencia se usa para elevar la carga a velocidad constante.</p>
+        </div>
+        <div class="box">
+          <div class="ttl">Resultados</div>
+          <table class="tbl">
+            <thead><tr><th scope="col"></th><th scope="col" class="ca">A</th><th scope="col" class="cb">B</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Potencia (kW)</th><td id="tPa"></td><td id="tPb"></td></tr>
+              <tr><th scope="row">Potencia (hp)</th><td id="tHa"></td><td id="tHb"></td></tr>
+              <tr><th scope="row">Trabajo m&middot;g&middot;h</th><td id="tWa"></td><td id="tWb"></td></tr>
+              <tr><th scope="row">Tiempo W / P</th><td id="tTa"></td><td id="tTb"></td></tr>
+              <tr><th scope="row">Velocidad</th><td id="tVa"></td><td id="tVb"></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </aside>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+'use strict';
+var G = 9.8, D = 10, HP = 745.7;
+var $ = function(id){ return document.getElementById(id); };
+
+function fmt(n, d){
+  if (d === undefined) d = 0;
+  if (!isFinite(n)) return '-';
+  var s = Math.abs(n).toFixed(d);
+  var neg = n < 0 && Number(s) !== 0;
+  var parts = s.split('.');
+  var i = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return (neg ? '-' : '') + i + (parts[1] ? '.' + parts[1] : '');
+}
+function fp(n){ return fmt(n, n >= 100 ? 0 : (n >= 10 ? 1 : 2)); }
+function niceScale(max, n){
+  var raw = max / n;
+  var p = Math.pow(10, Math.floor(Math.log10(raw)));
+  var f = raw / p;
+  var m = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
+  var step = m * p;
+  return { step: step, max: Math.ceil(max / step - 1e-9) * step };
+}
+function decFor(step){
+  if (step % 1 === 0) return 0;
+  return Math.abs((step * 10) % 1) < 1e-9 ? 1 : 2;
+}
+
+var views = ['laboratorio', 'comparador'];
+function show(v){
+  if (views.indexOf(v) < 0) v = 'laboratorio';
+  views.forEach(function(x){
+    $(x).hidden = (x !== v);
+    var tb = $('tab-' + x);
+    tb.setAttribute('aria-selected', String(x === v));
+    tb.tabIndex = (x === v) ? 0 : -1;
+  });
+  if (v === 'laboratorio') renderLab();
+  if (v === 'comparador') renderCmp();
+}
+Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(b, idx, all){
+  b.addEventListener('click', function(){ show(b.getAttribute('data-view')); });
+  b.addEventListener('keydown', function(e){
+    var k = e.key, j = -1;
+    if (k === 'ArrowRight') j = (idx + 1) % all.length;
+    if (k === 'ArrowLeft') j = (idx - 1 + all.length) % all.length;
+    if (j >= 0){ e.preventDefault(); show(all[j].getAttribute('data-view')); all[j].focus(); }
+  });
+});
+
+var LDEF = { m: 40, th: 25, mu: 0.2, v: 2 };
+var L = { m: 40, th: 25, mu: 0.2, v: 2, t: 0, running: false, speed: 1, ghost: null };
+
+function labCalc(){
+  var r = L.th * Math.PI / 180, s = Math.sin(r), c = Math.cos(r);
+  var Fg = L.m * G * s, Ff = L.mu * L.m * G * c, F = Fg + Ff;
+  return { r: r, s: s, c: c, Fg: Fg, Ff: Ff, F: F, T: D / L.v, W: F * D, P: F * L.v, Pu: Fg * L.v, Pf: Ff * L.v };
+}
+L.t = 0.45 * labCalc().T;
+
+function syncLabInputs(){
+  $('sm').value = L.m; $('sth').value = L.th; $('smu').value = L.mu; $('sv').value = L.v;
+}
+[['sm', 'm'], ['sth', 'th'], ['smu', 'mu'], ['sv', 'v']].forEach(function(pair){
+  $(pair[0]).addEventListener('input', function(e){
+    var p = L.t / labCalc().T;
+    L[pair[1]] = parseFloat(e.target.value);
+    L.t = p * labCalc().T;
+    renderLab();
+  });
+});
+$('speedSel').addEventListener('change', function(e){ L.speed = parseFloat(e.target.value); });
+$('playBtn').addEventListener('click', function(){
+  if (L.running){ L.running = false; }
+  else { if (L.t >= labCalc().T - 1e-9) L.t = 0; L.running = true; }
+  renderLab();
+});
+$('resetBtn').addEventListener('click', function(){ L.t = 0; L.running = false; renderLab(); });
+$('restoreBtn').addEventListener('click', function(){
+  L.m = LDEF.m; L.th = LDEF.th; L.mu = LDEF.mu; L.v = LDEF.v;
+  L.t = 0; L.running = false; L.ghost = null;
+  $('autoscale').checked = false;
+  syncLabInputs();
+  renderLab();
+});
+$('saveBtn').addEventListener('click', function(){
+  var c = labCalc();
+  L.ghost = { T: c.T, W: c.W, P: c.P };
+  renderLab();
+});
+$('clearBtn').addEventListener('click', function(){ L.ghost = null; renderLab(); });
+$('autoscale').addEventListener('change', function(){ renderLab(); });
+$('minGraph').addEventListener('click', function(){
+  var body = $('gBody');
+  body.hidden = !body.hidden;
+  $('minGraph').textContent = body.hidden ? '+' : '-';
+  $('minGraph').setAttribute('aria-expanded', String(!body.hidden));
+  if (!body.hidden) renderLab();
+});
+
+function drawRamp(c, s){
+  var X0 = 170, Y0 = 330, LV = 480, SP0 = 40, SP1 = LV - 62;
+  var cs = c.c, sn = c.s;
+  var xe = X0 + LV * cs, ye = Y0 - LV * sn;
+  $('rampPoly').setAttribute('points', X0 + ',' + Y0 + ' ' + xe.toFixed(1) + ',' + Y0 + ' ' + xe.toFixed(1) + ',' + ye.toFixed(1));
+  var surf = $('surf');
+  surf.setAttribute('x1', X0); surf.setAttribute('y1', Y0);
+  surf.setAttribute('x2', xe.toFixed(1)); surf.setAttribute('y2', ye.toFixed(1));
+
+  var nx = -sn, ny = -cs;
+  var tk = '', i, spi, bx, by, len;
+  for (i = 0; i <= D; i++){
+    spi = SP0 + i * (SP1 - SP0) / D;
+    bx = X0 + spi * cs; by = Y0 - spi * sn;
+    len = (i === 0 || i === D || i === D / 2) ? 14 : 8;
+    tk += 'M' + bx.toFixed(1) + ' ' + by.toFixed(1) + 'L' + (bx - nx * len).toFixed(1) + ' ' + (by - ny * len).toFixed(1);
+  }
+  $('ticks').setAttribute('d', tk);
+
+  var sp = SP0 + (s / D) * (SP1 - SP0);
+  var px = X0 + sp * cs, py = Y0 - sp * sn;
+  $('blk').setAttribute('transform', 'translate(' + px.toFixed(1) + ' ' + py.toFixed(1) + ') rotate(' + (-L.th) + ')');
+  $('blkTxt').textContent = L.m + ' kg';
+
+  var sx = px + 32 * cs + 20 * nx, sy = py - 32 * sn + 20 * ny;
+  var mx = xe + 20 * nx, my = ye + 20 * ny;
+  var rope = $('rope');
+  rope.setAttribute('x1', sx.toFixed(1)); rope.setAttribute('y1', sy.toFixed(1));
+  rope.setAttribute('x2', mx.toFixed(1)); rope.setAttribute('y2', my.toFixed(1));
+  $('motor').setAttribute('cx', mx.toFixed(1)); $('motor').setAttribute('cy', my.toFixed(1));
+  $('motorTxt').setAttribute('x', mx.toFixed(1)); $('motorTxt').setAttribute('y', my.toFixed(1));
+  var ft = $('fTxt');
+  ft.setAttribute('x', ((sx + mx) / 2 + nx * 24).toFixed(1));
+  ft.setAttribute('y', ((sy + my) / 2 + ny * 24).toFixed(1));
+  ft.textContent = 'F = ' + fmt(c.F, 0) + ' N';
+
+  var hl = $('hLine'), ht = $('hTxt');
+  var hMeters = s * sn;
+  if (Y0 - py > 6){
+    hl.setAttribute('x1', px.toFixed(1)); hl.setAttribute('y1', py.toFixed(1));
+    hl.setAttribute('x2', px.toFixed(1)); hl.setAttribute('y2', Y0);
+    hl.style.display = '';
+  } else { hl.style.display = 'none'; }
+  if (Y0 - py > 46){
+    ht.setAttribute('x', (px + 10).toFixed(1)); ht.setAttribute('y', ((py + Y0) / 2 + 7).toFixed(1));
+    ht.textContent = 'h = ' + fmt(hMeters, 1) + ' m';
+    ht.style.display = '';
+  } else { ht.style.display = 'none'; }
+
+  var arc = $('angArc');
+  if (L.th > 0){
+    arc.setAttribute('d', 'M ' + (X0 + 60) + ' ' + Y0 + ' A 60 60 0 0 0 ' + (X0 + 60 * cs).toFixed(1) + ' ' + (Y0 - 60 * sn).toFixed(1));
+  } else { arc.setAttribute('d', ''); }
+  var at = $('angTxt');
+  at.setAttribute('x', X0 + 70); at.setAttribute('y', Y0 - 12);
+  at.textContent = '\u03b8 = ' + L.th + '\u00b0';
+}
+
+function drawGraph(c){
+  if ($('gBody').hidden) return;
+  var svg = $('gSvg');
+  var rect = svg.getBoundingClientRect();
+  var Wc = Math.round(rect.width) || 264;
+  var Hc = Math.round(rect.height) || 190;
+  var ml = 48, mr = 10, mt = 8, mb = 26;
+  var pw = Wc - ml - mr, ph = Hc - mt - mb;
+  svg.setAttribute('viewBox', '0 0 ' + Wc + ' ' + Hc);
+  var xs, ys;
+  if ($('autoscale').checked){
+    xs = niceScale(c.T * 1.1, 5);
+    ys = niceScale(Math.max(c.W, 1) * 1.1, 4);
+  } else { xs = { step: 5, max: 20 }; ys = { step: 1500, max: 6000 }; }
+  function X(t){ return ml + t / xs.max * pw; }
+  function Y(w){ return mt + ph - w / ys.max * ph; }
+  var h = '<defs><clipPath id="pclip"><rect x="' + ml + '" y="' + mt + '" width="' + pw + '" height="' + ph + '"></rect></clipPath></defs>';
+  var nx = Math.round(xs.max / xs.step), ny = Math.round(ys.max / ys.step), i;
+  var dx = decFor(xs.step), dy = decFor(ys.step);
+  for (i = 0; i <= nx; i++){
+    var tx = i * xs.step, xp = X(tx);
+    h += '<line class="gg" x1="' + xp.toFixed(1) + '" y1="' + mt + '" x2="' + xp.toFixed(1) + '" y2="' + (mt + ph) + '"></line>';
+    h += '<text class="gt" x="' + xp.toFixed(1) + '" y="' + (mt + ph + 12) + '" text-anchor="middle">' + fmt(tx, dx) + '</text>';
+  }
+  for (i = 0; i <= ny; i++){
+    var wy = i * ys.step, yp = Y(wy);
+    h += '<line class="gg" x1="' + ml + '" y1="' + yp.toFixed(1) + '" x2="' + (ml + pw) + '" y2="' + yp.toFixed(1) + '"></line>';
+    h += '<text class="gt" x="' + (ml - 5) + '" y="' + (yp + 3).toFixed(1) + '" text-anchor="end">' + fmt(wy, dy) + '</text>';
+  }
+  h += '<line class="gax" x1="' + ml + '" y1="' + (mt + ph) + '" x2="' + (ml + pw) + '" y2="' + (mt + ph) + '"></line>';
+  h += '<line class="gax" x1="' + ml + '" y1="' + mt + '" x2="' + ml + '" y2="' + (mt + ph) + '"></line>';
+  h += '<text class="gtitle" x="' + (ml + pw / 2) + '" y="' + (Hc - 3) + '" text-anchor="middle">Tiempo t (s)</text>';
+  h += '<text class="gtitle" transform="translate(10 ' + (mt + ph / 2) + ') rotate(-90)" text-anchor="middle">Trabajo W (J)</text>';
+
+  h += '<g clip-path="url(#pclip)">';
+  if (L.ghost){
+    h += '<line class="gghost" x1="' + X(0).toFixed(1) + '" y1="' + Y(0).toFixed(1) + '" x2="' + X(L.ghost.T).toFixed(1) + '" y2="' + Y(L.ghost.W).toFixed(1) + '"></line>';
+  }
+  h += '<line class="gpred" x1="' + X(0).toFixed(1) + '" y1="' + Y(0).toFixed(1) + '" x2="' + X(c.T).toFixed(1) + '" y2="' + Y(c.W).toFixed(1) + '"></line>';
+  var tn = Math.min(L.t, c.T), wn = c.F * L.v * tn;
+  h += '<line class="gtrace" x1="' + X(0).toFixed(1) + '" y1="' + Y(0).toFixed(1) + '" x2="' + X(tn).toFixed(1) + '" y2="' + Y(wn).toFixed(1) + '"></line>';
+  h += '<circle class="gdot" cx="' + X(tn).toFixed(1) + '" cy="' + Y(wn).toFixed(1) + '" r="4.5"></circle>';
+  h += '</g>';
+
+  var lx = Math.min(X(c.T * 0.5) + 8, ml + pw - 140);
+  var ly = Math.min(Y(c.W * 0.5) + 16, mt + ph - 6);
+  h += '<text class="gp" x="' + Math.max(lx, ml + 4).toFixed(1) + '" y="' + ly.toFixed(1) + '">P = ' + fp(c.P) + ' W</text>';
+  if (L.ghost){
+    h += '<text class="gm" x="' + (ml + 6) + '" y="' + (mt + 12) + '">- - guardada: ' + fp(L.ghost.P) + ' W</text>';
+  }
+  svg.innerHTML = h;
+}
+
+function renderLab(){
+  var c = labCalc();
+  if (L.t > c.T) L.t = c.T;
+  if (L.t < 0) L.t = 0;
+  var s = L.v * L.t;
+  $('om').textContent = L.m + ' kg';
+  $('oth').textContent = L.th + '\u00b0';
+  $('omu').textContent = L.mu.toFixed(2);
+  $('ov').textContent = L.v.toFixed(1) + ' m/s';
+
+  drawRamp(c, s);
+  drawGraph(c);
+
+  $('hT').textContent = fmt(L.t, 1);
+  $('hV').textContent = fmt(L.v, 1);
+  $('hW').textContent = fmt(c.F * s);
+  $('playBtn').textContent = L.running ? 'Pausar' : (L.t >= c.T - 1e-9 ? 'Repetir' : 'Reproducir');
+
+  $('pBig').textContent = fp(c.P);
+  $('pKw').textContent = fmt(c.P / 1000, 3);
+  $('pHp').textContent = fmt(c.P / HP, 2);
+  var bulbs = c.P / 100;
+  $('pBulbs').textContent = bulbs < 1 ? '< 1 foco de 100 W' : '\u2248 ' + fmt(bulbs, 1) + ' focos';
+
+  $('s1').textContent = 'F = m\u00b7g\u00b7(sen \u03b8 + \u03bc\u00b7cos \u03b8) = ' + fmt(c.F, 1) + ' N';
+  $('s2').textContent = 'W = F\u00b7d = ' + fmt(c.F, 1) + ' N \u00d7 ' + D + ' m = ' + fmt(c.W) + ' J';
+  $('s3').textContent = 't = d / v = ' + D + ' m \u00f7 ' + fmt(L.v, 1) + ' m/s = ' + fmt(c.T, 1) + ' s';
+  $('s4').textContent = 'P = W / t = ' + fmt(c.W) + ' J \u00f7 ' + fmt(c.T, 1) + ' s = ' + fp(c.P) + ' W';
+  $('s5').textContent = 'P = F\u00b7v = ' + fmt(c.F, 1) + ' N \u00d7 ' + fmt(L.v, 1) + ' m/s = ' + fp(c.P) + ' W';
+
+  var pctU = c.F > 0 ? c.Fg / c.F * 100 : 0;
+  var pctF = c.F > 0 ? 100 - pctU : 0;
+  $('segU').style.width = pctU.toFixed(1) + '%';
+  $('segF').style.width = pctF.toFixed(1) + '%';
+  $('pU').textContent = fp(c.Pu) + ' W';
+  $('pF').textContent = fp(c.Pf) + ' W';
+  var note;
+  if (c.F <= 0) note = 'No hay nada que vencer: la potencia necesaria es 0 W.';
+  else if (L.th === 0) note = 'Rampa horizontal: la carga no gana altura y toda la potencia se pierde en friccion.';
+  else note = 'Eficiencia: ' + fmt(pctU) + ' %. Solo la parte util aumenta la energia potencial (m\u00b7g\u00b7h).';
+  $('effNote').textContent = note;
+}
+
+var CDEF = { m: 500, h: 15, pa: 1.5, pb: 4 };
+var C = { m: 500, h: 15, pa: 1.5, pb: 4, t: 0, running: false };
+function cCalc(){
+  var W = C.m * G * C.h;
+  var ta = W / (C.pa * 1000), tb = W / (C.pb * 1000);
+  return { W: W, ta: ta, tb: tb, tmax: Math.max(ta, tb) };
+}
+C.t = 0.4 * cCalc().tmax;
+
+function syncCmpInputs(){
+  $('cm').value = C.m; $('ch').value = C.h; $('cpa').value = C.pa; $('cpb').value = C.pb;
+}
+[['cm', 'm'], ['ch', 'h'], ['cpa', 'pa'], ['cpb', 'pb']].forEach(function(pair){
+  $(pair[0]).addEventListener('input', function(e){
+    var p = C.t / cCalc().tmax;
+    C[pair[1]] = parseFloat(e.target.value);
+    C.t = p * cCalc().tmax;
+    renderCmp();
+  });
+});
+$('cPlay').addEventListener('click', function(){
+  if (C.running){ C.running = false; }
+  else { if (C.t >= cCalc().tmax - 1e-9) C.t = 0; C.running = true; }
+  renderCmp();
+});
+$('cReset').addEventListener('click', function(){ C.t = 0; C.running = false; renderCmp(); });
+$('cRestore').addEventListener('click', function(){
+  C.m = CDEF.m; C.h = CDEF.h; C.pa = CDEF.pa; C.pb = CDEF.pb;
+  C.t = 0; C.running = false;
+  syncCmpInputs();
+  renderCmp();
+});
+
+function renderCmp(){
+  var k = cCalc();
+  if (C.t > k.tmax) C.t = k.tmax;
+  $('ocm').textContent = C.m + ' kg';
+  $('och').textContent = C.h + ' m';
+  $('ocpa').textContent = C.pa.toFixed(1) + ' kW';
+  $('ocpb').textContent = C.pb.toFixed(1) + ' kW';
+  $('cH').textContent = 'h = ' + C.h + ' m';
+  $('hcm').textContent = fmt(C.m);
+  $('hch').textContent = C.h;
+  $('hcw').textContent = fmt(k.W / 1000, 1);
+
+  var fa = Math.min(1, C.t / k.ta), fb = Math.min(1, C.t / k.tb);
+  [['A', fa, k.ta], ['B', fb, k.tb]].forEach(function(r){
+    var bottom = 480 - r[1] * 330;
+    $('box' + r[0]).setAttribute('y', (bottom - 46).toFixed(1));
+    $('boxT' + r[0]).setAttribute('y', (bottom - 23).toFixed(1));
+    $('boxT' + r[0]).textContent = C.m + ' kg';
+    $('cab' + r[0]).setAttribute('y2', (bottom - 46).toFixed(1));
+    var tm = $('tm' + r[0]);
+    if (r[1] >= 1){ tm.textContent = 'Listo en ' + fmt(r[2], 1) + ' s'; tm.setAttribute('class', 'tm done'); }
+    else { tm.textContent = 't = ' + fmt(Math.min(C.t, r[2]), 1) + ' s'; tm.setAttribute('class', 'tm'); }
+  });
+  $('lbA').textContent = 'Maquina A \u00b7 ' + C.pa.toFixed(1) + ' kW';
+  $('lbB').textContent = 'Maquina B \u00b7 ' + C.pb.toFixed(1) + ' kW';
+
+  var f = k.tmax / 8;
+  $('cNote').innerHTML = Math.abs(f - 1) < 0.05
+    ? 'Animacion a tiempo real.'
+    : 'Animacion a ' + fmt(f, f >= 10 ? 0 : 1) + '&#215; velocidad.';
+  $('cPlay').textContent = C.running ? 'Pausar' : (C.t >= k.tmax - 1e-9 ? 'Repetir carrera' : 'Iniciar carrera');
+
+  $('tPa').textContent = C.pa.toFixed(1);
+  $('tPb').textContent = C.pb.toFixed(1);
+  $('tHa').textContent = fmt(C.pa * 1000 / HP, 2);
+  $('tHb').textContent = fmt(C.pb * 1000 / HP, 2);
+  $('tWa').textContent = fmt(k.W / 1000, 1) + ' kJ';
+  $('tWb').textContent = fmt(k.W / 1000, 1) + ' kJ';
+  $('tTa').textContent = fmt(k.ta, 1) + ' s';
+  $('tTb').textContent = fmt(k.tb, 1) + ' s';
+  $('tVa').textContent = fmt(C.h / k.ta, 2) + ' m/s';
+  $('tVb').textContent = fmt(C.h / k.tb, 2) + ' m/s';
+
+  var hi = Math.max(C.pa, C.pb), lo = Math.min(C.pa, C.pb), ratio = hi / lo, ins;
+  if (Math.abs(C.pa - C.pb) < 1e-9){
+    ins = 'Ambas maquinas tienen la misma potencia y tardan lo mismo.';
+  } else {
+    var fast = C.pb > C.pa ? 'B' : 'A';
+    ins = 'La maquina ' + fast + ' tiene ' + fmt(ratio, 1) + ' veces mas potencia y hace el trabajo en ' + fmt(ratio, 1) + ' veces menos tiempo (' + fmt(Math.min(k.ta, k.tb), 1) + ' s vs ' + fmt(Math.max(k.ta, k.tb), 1) + ' s).';
+  }
+  $('cInsight').textContent = ins;
+}
+
+var last = 0;
+function frame(ts){
+  var dt = last ? Math.min(0.1, (ts - last) / 1000) : 0;
+  last = ts;
+  if (L.running){
+    L.t += dt * L.speed;
+    var c = labCalc();
+    if (L.t >= c.T){ L.t = c.T; L.running = false; }
+    renderLab();
+  }
+  if (C.running){
+    var k = cCalc();
+    C.t += dt * (k.tmax / 8);
+    if (C.t >= k.tmax){ C.t = k.tmax; C.running = false; }
+    renderCmp();
+  }
+  requestAnimationFrame(frame);
+}
+
+if ('ResizeObserver' in window){
+  new ResizeObserver(function(){ if (!$('laboratorio').hidden) drawGraph(labCalc()); }).observe($('gSvg'));
+}
+window.addEventListener('hashchange', function(){ show(location.hash.slice(1)); });
+
+renderLab();
+renderCmp();
+show(location.hash.slice(1));
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
